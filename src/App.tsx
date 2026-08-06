@@ -16,6 +16,7 @@ import {
   deleteBookFirestore,
   subscribeBlogs,
   saveBlogFirestore,
+  incrementBlogViewsFirestore,
   deleteBlogFirestore,
   subscribeOrders,
   addOrderFirestore,
@@ -179,7 +180,8 @@ export default function App() {
     const updatedViews = (blog.views || 0) + 1;
     const updatedBlog = { ...blog, views: updatedViews };
     setSelectedBlog(updatedBlog);
-    saveBlogFirestore(updatedBlog);
+    setBlogs(prev => prev.map(b => b.id === blog.id ? updatedBlog : b));
+    incrementBlogViewsFirestore(blog.id);
     setCurrentView('single-blog');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };

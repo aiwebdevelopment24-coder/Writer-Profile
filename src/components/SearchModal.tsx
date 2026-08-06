@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, X, BookOpen, FileText } from 'lucide-react';
+import { Search, X, BookOpen, FileText, Eye } from 'lucide-react';
 import { Book, BlogPost, ViewMode } from '../types';
 
 interface SearchModalProps {
@@ -123,9 +123,13 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                         <h5 className="font-serif-bn font-semibold text-sm text-[#1D1E20] line-clamp-1">
                           {blog.title}
                         </h5>
-                        <p className="text-xs text-[#8C887B] mt-0.5">
-                          {blog.date} • {blog.readTime}
-                        </p>
+                        <div className="text-xs text-[#8C887B] mt-0.5 flex items-center justify-between gap-2">
+                          <span>{blog.date} • {blog.readTime}</span>
+                          <span className="flex items-center gap-1 text-[#C29B47] font-semibold">
+                            <Eye className="w-3 h-3" />
+                            <span>{(blog.views || 0).toLocaleString('bn-BD')}</span>
+                          </span>
+                        </div>
                       </div>
                     ))}
                   </div>

@@ -7,7 +7,8 @@ import {
   updateDoc, 
   deleteDoc, 
   getDocs,
-  serverTimestamp
+  serverTimestamp,
+  increment
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { Book, BlogPost, Order, Review, InquiryMessage, SiteConfig } from '../types';
@@ -132,6 +133,17 @@ export const saveBlogFirestore = async (blog: BlogPost) => {
     await setDoc(docRef, blog, { merge: true });
   } catch (err) {
     handleFirestoreError(err, 'save', `blogs/${blog.id}`);
+  }
+};
+
+export const incrementBlogViewsFirestore = async (blogId: string) => {
+  try {
+    const docRef = doc(db, 'blogs', blogId);
+    await updateDoc(docRef, {
+      views: increment(1)
+    });
+  } catch (err) {
+    handleFirestoreError(err, 'incrementViews', `blogs/${blogId}`);
   }
 };
 
