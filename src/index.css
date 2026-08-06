@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Hind Siliguri', 'Anek Bangla', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  h1, h2, h3, h4, .font-serif-bn {
+    font-family: 'Noto Serif Bengali', 'Anek Bangla', serif;
+  }
+}
+
+/* Custom scrollbar for clean aesthetic */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1efea;
+}
+::-webkit-scrollbar-thumb {
+  background: #d4c8b2;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #b8a688;
+}
+
+/* 3D Book perspective styles */
+.book-shadow {
+  box-shadow: -10px 15px 25px -5px rgba(0, 0, 0, 0.3), -2px 0 8px rgba(0,0,0,0.15);
+}
+
+.book-spine-effect {
+  background: linear-gradient(90deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 3%, rgba(0,0,0,0.2) 6%, rgba(0,0,0,0.05) 100%);
+}
