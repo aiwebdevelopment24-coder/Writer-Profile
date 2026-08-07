@@ -71,8 +71,8 @@ export const AdminStudioView: React.FC<AdminStudioViewProps> = ({
     rating: 4.9,
     ratingCount: 50,
     status: 'published',
-    isNewRelease: true,
-    isFeatured: true,
+    isNewRelease: false,
+    isFeatured: false,
     pdfUrl: '',
   });
 
@@ -128,8 +128,8 @@ export const AdminStudioView: React.FC<AdminStudioViewProps> = ({
         rating: 4.9,
         ratingCount: 50,
         status: 'published',
-        isNewRelease: true,
-        isFeatured: true,
+        isNewRelease: false,
+        isFeatured: false,
         pdfUrl: '',
       });
     }
@@ -142,15 +142,45 @@ export const AdminStudioView: React.FC<AdminStudioViewProps> = ({
 
     if (editingBookId) {
       onUpdateBook({
+        category: 'উপন্যাস',
+        genreTag: 'উপন্যাস • ২০২৪',
+        year: '২০২৪',
+        coverImage: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=800&q=80',
+        shortSynopsis: '',
+        fullSynopsis: '',
+        price: 450,
+        pages: 300,
+        isbn: '978-984-1234-56-7',
+        publisher: 'ঐতিহ্য প্রকাশনী',
+        rating: 4.9,
+        ratingCount: 50,
+        status: 'published',
+        author: bookForm.author !== undefined ? bookForm.author : (siteConfig.authorName || ''),
         ...(bookForm as Book),
         id: editingBookId,
       });
       triggerSaveToast('বইয়ের তথ্য আপডেট করা হয়েছে!');
     } else {
       const newBook: Book = {
-        ...(bookForm as Book),
+        title: bookForm.title || 'শিরোনামহীন বই',
+        category: bookForm.category || 'উপন্যাস',
+        genreTag: bookForm.genreTag || `${bookForm.category || 'উপন্যাস'} • ২০২৪`,
+        year: bookForm.year || '২০২৪',
+        coverImage: bookForm.coverImage || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=800&q=80',
+        shortSynopsis: bookForm.shortSynopsis || '',
+        fullSynopsis: bookForm.fullSynopsis || bookForm.shortSynopsis || '',
+        price: Number(bookForm.price) || 450,
+        pages: Number(bookForm.pages) || 250,
+        isbn: bookForm.isbn || '978-984-1234-56-7',
+        publisher: bookForm.publisher || 'ঐতিহ্য প্রকাশনী',
+        rating: 5.0,
+        ratingCount: 1,
+        status: 'published',
+        isNewRelease: bookForm.isNewRelease ?? false,
+        isFeatured: bookForm.isFeatured ?? false,
+        pdfUrl: bookForm.pdfUrl || '',
+        author: bookForm.author !== undefined ? bookForm.author : (siteConfig.authorName || ''),
         id: `book-${Date.now()}`,
-        author: siteConfig.authorName || 'আহমেদ শরীফ',
       };
       onAddBook(newBook);
       triggerSaveToast('নতুন বই সফলভাবে যুক্ত করা হয়েছে!');
@@ -186,15 +216,32 @@ export const AdminStudioView: React.FC<AdminStudioViewProps> = ({
 
     if (editingBlogId) {
       onUpdateBlog({
+        category: 'সাহিত্যচর্চা',
+        date: new Date().toLocaleDateString('bn-BD', { year: 'numeric', month: 'long', day: 'numeric' }),
+        readTime: '৫ মিনিট পাঠ',
+        coverImage: 'https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=800&q=80',
+        excerpt: '',
+        content: '',
+        status: 'published',
+        isFeatured: false,
+        views: 0,
         ...(blogForm as BlogPost),
         id: editingBlogId,
       });
       triggerSaveToast('ব্লগ পোস্ট আপডেট করা হয়েছে!');
     } else {
       const newBlog: BlogPost = {
-        ...(blogForm as BlogPost),
-        id: `blog-${Date.now()}`,
+        title: blogForm.title || 'শিরোনামহীন পোস্ট',
+        category: blogForm.category || 'সাহিত্যচর্চা',
+        date: blogForm.date || new Date().toLocaleDateString('bn-BD', { year: 'numeric', month: 'long', day: 'numeric' }),
+        readTime: blogForm.readTime || '৫ মিনিট পাঠ',
+        coverImage: blogForm.coverImage || 'https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=800&q=80',
+        excerpt: blogForm.excerpt || '',
+        content: blogForm.content || blogForm.excerpt || '',
+        status: 'published',
+        isFeatured: blogForm.isFeatured ?? false,
         views: 0,
+        id: `blog-${Date.now()}`,
       };
       onAddBlog(newBlog);
       triggerSaveToast('নতুন ব্লগ পোস্ট পাবলিশ করা হয়েছে!');
@@ -659,7 +706,7 @@ export const AdminStudioView: React.FC<AdminStudioViewProps> = ({
                 <div className="space-y-1">
                   <label className="block text-xs font-bold text-[#3A3834]">এডমিন পাসওয়ার্ড (Admin Password)</label>
                   <input
-                    type="text"
+                    type="password"
                     required
                     value={configForm.adminPassword}
                     onChange={(e) => setConfigForm({ ...configForm, adminPassword: e.target.value })}
@@ -1110,12 +1157,10 @@ export const AdminStudioView: React.FC<AdminStudioViewProps> = ({
                         <button
                           type="button"
                           onClick={() => {
-                            if (window.confirm(`আপনি কি "${rev.reviewerName}" এর এই রিভিউটি ডিলিট করতে চান?`)) {
-                              onDeleteReview?.(rev.id);
-                              triggerSaveToast('রিভিউ সফলভাবে মুছে ফেলা হয়েছে!');
-                            }
+                            onDeleteReview?.(rev.id);
+                            triggerSaveToast('রিভিউ সফলভাবে মুছে ফেলা হয়েছে!');
                           }}
-                          className="px-2.5 py-1 bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-600 hover:text-white rounded-lg transition-colors flex items-center gap-1 text-xs font-bold shadow-sm"
+                          className="px-2.5 py-1 bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-600 hover:text-white rounded-lg transition-colors flex items-center gap-1 text-xs font-bold shadow-sm cursor-pointer"
                           title="রিভিউটি মুছে ফেলুন"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -1174,8 +1219,8 @@ export const AdminStudioView: React.FC<AdminStudioViewProps> = ({
                     <input
                       type="text"
                       required
-                      placeholder="আহমেদ শরীফ"
-                      value={bookForm.author || siteConfig.authorName || 'আহমেদ শরীফ'}
+                      placeholder={siteConfig.authorName || "লেখকের নাম"}
+                      value={bookForm.author !== undefined ? bookForm.author : (siteConfig.authorName || '')}
                       onChange={(e) => setBookForm({ ...bookForm, author: e.target.value })}
                       className="w-full px-3 py-2.5 bg-[#F9F8F5] border border-[#D9D3C7] rounded-xl text-xs font-bold focus:outline-none focus:border-[#C29B47]"
                     />

@@ -21,8 +21,13 @@ import {
   DEFAULT_SITE_CONFIG 
 } from '../data/initialData';
 
-// Helper error handler
+// Helper error handler & sanitizer
 const handledErrors = new Set<string>();
+
+const cleanObject = <T>(obj: T): T => {
+  if (!obj) return obj;
+  return JSON.parse(JSON.stringify(obj));
+};
 
 const handleFirestoreError = (error: any, action: string, path: string) => {
   const isPermissionError = 
@@ -70,19 +75,36 @@ export const fetchBooksFirestore = async (): Promise<Book[] | null> => {
 };
 
 export const subscribeBooks = (onUpdate: (books: Book[]) => void) => {
-  // Use getDocs once instead of onSnapshot to prevent layout flickering from snapshot permission errors/updates
-  fetchBooksFirestore().then((books) => {
-    if (books && books.length > 0) {
-      onUpdate(books);
+  const colRef = collection(db, 'books');
+  let loadedFromFirestore = false;
+
+  return onSnapshot(colRef, async (snapshot) => {
+    loadedFromFirestore = true;
+    if (snapshot.empty) {
+      try {
+        for (const book of INITIAL_BOOKS) {
+          await setDoc(doc(db, 'books', book.id), book);
+        }
+      } catch (e) {
+        handleFirestoreError(e, 'seed', 'books');
+      }
+      onUpdate(INITIAL_BOOKS);
+    } else {
+      const items: Book[] = [];
+      snapshot.forEach((docSnap) => {
+        items.push({ id: docSnap.id, ...docSnap.data() } as Book);
+      });
+      onUpdate(items);
     }
+  }, (err) => {
+    handleFirestoreError(err, 'listen', 'books');
   });
-  return () => {};
 };
 
 export const saveBookFirestore = async (book: Book) => {
   try {
     const docRef = doc(db, 'books', book.id);
-    await setDoc(docRef, book, { merge: true });
+    await setDoc(docRef, cleanObject(book), { merge: true });
   } catch (err) {
     handleFirestoreError(err, 'save', `books/${book.id}`);
   }
@@ -106,7 +128,7 @@ export const subscribeBlogs = (onUpdate: (blogs: BlogPost[]) => void) => {
     if (snapshot.empty) {
       try {
         for (const blog of INITIAL_BLOGS) {
-          await setDoc(doc(db, 'blogs', blog.id), blog);
+          await setDoc(doc(db, 'blogs', blog.id), cleanObject(blog));
         }
       } catch (e) {
         handleFirestoreError(e, 'seed', 'blogs');
@@ -130,7 +152,7 @@ export const subscribeBlogs = (onUpdate: (blogs: BlogPost[]) => void) => {
 export const saveBlogFirestore = async (blog: BlogPost) => {
   try {
     const docRef = doc(db, 'blogs', blog.id);
-    await setDoc(docRef, blog, { merge: true });
+    await setDoc(docRef, cleanObject(blog), { merge: true });
   } catch (err) {
     handleFirestoreError(err, 'save', `blogs/${blog.id}`);
   }
@@ -189,7 +211,7 @@ export const subscribeOrders = (onUpdate: (orders: Order[]) => void) => {
 export const addOrderFirestore = async (order: Order) => {
   try {
     const docRef = doc(db, 'orders', order.id);
-    await setDoc(docRef, { ...order, createdAt: serverTimestamp() });
+    await setDoc(docRef, cleanObject({ ...order, createdAt: serverTimestamp() }));
   } catch (err) {
     handleFirestoreError(err, 'add', `orders/${order.id}`);
   }
@@ -221,7 +243,7 @@ export const subscribeReviews = (onUpdate: (reviews: Review[]) => void) => {
     if (snapshot.empty) {
       try {
         for (const review of INITIAL_REVIEWS) {
-          await setDoc(doc(db, 'reviews', review.id), review);
+          await setDoc(doc(db, 'reviews', review.id), cleanObject(review));
         }
       } catch (e) {
         handleFirestoreError(e, 'seed', 'reviews');
@@ -244,7 +266,7 @@ export const subscribeReviews = (onUpdate: (reviews: Review[]) => void) => {
 
 export const saveReviewFirestore = async (review: Review) => {
   try {
-    await setDoc(doc(db, 'reviews', review.id), review, { merge: true });
+    await setDoc(doc(db, 'reviews', review.id), cleanObject(review), { merge: true });
   } catch (err) {
     handleFirestoreError(err, 'save', `reviews/${review.id}`);
   }
@@ -268,7 +290,7 @@ export const subscribeInquiries = (onUpdate: (inquiries: InquiryMessage[]) => vo
     if (snapshot.empty) {
       try {
         for (const inq of INITIAL_INQUIRIES) {
-          await setDoc(doc(db, 'inquiries', inq.id), inq);
+          await setDoc(doc(db, 'inquiries', inq.id), cleanObject(inq));
         }
       } catch (e) {
         handleFirestoreError(e, 'seed', 'inquiries');
@@ -291,7 +313,7 @@ export const subscribeInquiries = (onUpdate: (inquiries: InquiryMessage[]) => vo
 
 export const addInquiryFirestore = async (inquiry: InquiryMessage) => {
   try {
-    await setDoc(doc(db, 'inquiries', inquiry.id), inquiry);
+    await setDoc(doc(db, 'inquiries', inquiry.id), cleanObject(inquiry));
   } catch (err) {
     handleFirestoreError(err, 'add', `inquiries/${inquiry.id}`);
   }
@@ -322,7 +344,7 @@ export const subscribeSiteConfig = (onUpdate: (config: SiteConfig) => void) => {
     loadedFromFirestore = true;
     if (!docSnap.exists()) {
       try {
-        await setDoc(docRef, DEFAULT_SITE_CONFIG);
+        await setDoc(docRef, cleanObject(DEFAULT_SITE_CONFIG));
       } catch (e) {
         handleFirestoreError(e, 'seed', 'settings/siteConfig');
       }
@@ -340,7 +362,7 @@ export const subscribeSiteConfig = (onUpdate: (config: SiteConfig) => void) => {
 
 export const saveSiteConfigFirestore = async (config: SiteConfig) => {
   try {
-    await setDoc(doc(db, 'settings', 'siteConfig'), config, { merge: true });
+    await setDoc(doc(db, 'settings', 'siteConfig'), cleanObject(config), { merge: true });
   } catch (err) {
     handleFirestoreError(err, 'save', 'settings/siteConfig');
   }

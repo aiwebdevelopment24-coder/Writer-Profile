@@ -67,12 +67,12 @@ export const Header: React.FC<HeaderProps> = ({
                 />
               ) : (
                 <div className="w-9 h-9 rounded-lg bg-[#1D1E20] text-[#C29B47] flex items-center justify-center font-bold font-serif-bn text-xl group-hover:bg-[#C29B47] group-hover:text-white transition-colors shadow-sm">
-                  {siteConfig.siteName ? siteConfig.siteName.charAt(0) : 'আ'}
+                  {siteConfig.siteName ? siteConfig.siteName.charAt(0) : 'জু'}
                 </div>
               )}
               <div className="flex flex-col">
                 <span className="font-serif-bn text-xl font-bold tracking-tight text-[#1D1E20] group-hover:text-[#C29B47] transition-colors leading-tight">
-                  {siteConfig.siteName || 'আহমেদ শরীফ'}
+                  {siteConfig.siteName || 'জুবায়ের আহমেদ'}
                 </span>
                 <span className="text-[10px] tracking-wider text-[#8C887B] font-medium">
                   {siteConfig.authorDesignation || 'সাহিত্যিক ও প্রাবন্ধিক'}

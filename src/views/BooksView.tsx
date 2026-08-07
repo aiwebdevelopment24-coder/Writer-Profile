@@ -129,9 +129,11 @@ export const BooksView: React.FC<BooksViewProps> = ({
                     >
                       {book.title}
                     </h3>
-                    <p className="text-xs text-[#8C887B] font-semibold">
-                      লেখক: <span className="text-[#1D1E20] font-bold">{book.author || 'আহমেদ শরীফ'}</span>
-                    </p>
+                    {book.author && (
+                      <p className="text-xs text-[#8C887B] font-semibold">
+                        লেখক: <span className="text-[#1D1E20] font-bold">{book.author}</span>
+                      </p>
+                    )}
                     <p className="text-xs text-[#5C584E] leading-relaxed line-clamp-2 font-medium pt-1">
                       {book.shortSynopsis || book.fullSynopsis}
                     </p>

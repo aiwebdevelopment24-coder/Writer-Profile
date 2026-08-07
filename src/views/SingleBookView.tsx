@@ -88,9 +88,7 @@ export const SingleBookView: React.FC<SingleBookViewProps> = ({
   };
 
   const handleDelete = (revId: string) => {
-    if (window.confirm('আপনি কি এই রিভিউটি মুছে ফেলতে চান?')) {
-      onDeleteReview?.(revId);
-    }
+    onDeleteReview?.(revId);
   };
 
   const isVideo = book.pdfUrl && isYouTubeUrl(book.pdfUrl);
@@ -138,9 +136,11 @@ export const SingleBookView: React.FC<SingleBookViewProps> = ({
               <h1 className="font-serif-bn font-bold text-3xl sm:text-4xl text-[#1D1E20]">
                 {book.title}
               </h1>
-              <p className="text-sm font-semibold text-[#8C887B]">
-                লেখক: <span className="text-[#1D1E20] font-bold">{book.author || 'আহমেদ শরীফ'}</span>
-              </p>
+              {book.author && (
+                <p className="text-sm font-semibold text-[#8C887B]">
+                  লেখক: <span className="text-[#1D1E20] font-bold">{book.author}</span>
+                </p>
+              )}
               <div className="pt-0.5">
                 <span className="text-xs font-bold text-[#C29B47] uppercase tracking-wider bg-[#FFF7E6] border border-[#C29B47]/30 px-2.5 py-1 rounded-md inline-block">
                   ক্যাটাগরি: {book.category}
@@ -368,7 +368,7 @@ export const SingleBookView: React.FC<SingleBookViewProps> = ({
         <div className="space-y-4">
           {bookReviews.map((rev) => {
             const isMyReview = myReviewIds.includes(rev.id) || rev.authorKey === 'my-local-review';
-            const canDelete = isAdmin;
+            const canDelete = isAdmin || isMyReview;
 
             return (
               <div key={rev.id} className="bg-white p-5 rounded-2xl border border-[#E6E2D8] space-y-2 shadow-sm relative group">
@@ -449,7 +449,9 @@ export const SingleBookView: React.FC<SingleBookViewProps> = ({
                   <h4 className="font-serif-bn font-bold text-base text-[#1D1E20]">
                     {obook.title}
                   </h4>
-                  <p className="text-xs text-[#8C887B]">{obook.author || 'আহমেদ শরীফ'}</p>
+                  {obook.author && (
+                    <p className="text-xs text-[#8C887B]">{obook.author}</p>
+                  )}
                 </div>
                 <div className="flex items-baseline gap-2">
                   <strong className="text-xs text-[#1D1E20]">৳ {obook.price}</strong>

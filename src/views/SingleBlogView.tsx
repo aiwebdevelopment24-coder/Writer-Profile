@@ -33,7 +33,7 @@ export const SingleBlogView: React.FC<SingleBlogViewProps> = ({ blog, setCurrent
         <div className="flex items-center gap-4 text-xs text-[#8C887B] border-b border-[#E6E2D8] pb-4">
           <span className="flex items-center gap-1">
             <User className="w-3.5 h-3.5 text-[#C29B47]" />
-            <span>আহমেদ শরীফ</span>
+            <span>{blog.author || 'জুবায়ের আহমেদ'}</span>
           </span>
           <span className="flex items-center gap-1">
             <Calendar className="w-3.5 h-3.5" />
@@ -66,10 +66,10 @@ export const SingleBlogView: React.FC<SingleBlogViewProps> = ({ blog, setCurrent
       <div className="p-6 bg-[#EFECE6] rounded-2xl flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-[#1D1E20] text-[#C29B47] flex items-center justify-center font-bold font-serif-bn">
-            আ
+            জু
           </div>
           <div>
-            <h4 className="font-bold text-sm text-[#1D1E20]">আহমেদ শরীফ</h4>
+            <h4 className="font-bold text-sm text-[#1D1E20]">{blog.author || 'জুবায়ের আহমেদ'}</h4>
             <p className="text-xs text-[#8C887B]">সাহিত্যিক ও প্রাবন্ধিক</p>
           </div>
         </div>

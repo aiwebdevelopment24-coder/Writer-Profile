@@ -19,7 +19,7 @@ export const Footer: React.FC<FooterProps> = ({ setCurrentView, siteConfig, onAd
           {/* Brand & Author Name (Editable from Admin) */}
           <div className="text-center md:text-left space-y-1">
             <h3 className="font-serif-bn font-bold text-2xl sm:text-3xl text-[#1D1E20]">
-              {siteConfig.authorName || siteConfig.siteName || 'আহমেদ শরীফ'}
+              {siteConfig.authorName || siteConfig.siteName || 'জুবায়ের আহমেদ'}
             </h3>
             <p className="text-sm font-semibold text-[#C29B47]">
               {siteConfig.authorDesignation || 'সাহিত্যিক ও প্রাবন্ধিক'}
@@ -110,7 +110,7 @@ export const Footer: React.FC<FooterProps> = ({ setCurrentView, siteConfig, onAd
         {/* Bottom Section: Footer Note & Admin Button */}
         <div className="flex flex-col sm:flex-row items-center justify-between text-xs text-[#8C887B] gap-4 pt-2">
           <p className="text-center sm:text-left leading-relaxed">
-            {siteConfig.footerText || '© ২০২৪ আহমেদ শরীফ। সর্বস্বত্ব সংরক্ষিত।'}
+            {siteConfig.footerText || '© ২০২৪ জুবায়ের আহমেদ। সর্বস্বত্ব সংরক্ষিত।'}
           </p>
 
           {/* Admin Panel Access Button in Footer */}

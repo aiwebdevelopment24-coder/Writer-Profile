@@ -32,6 +32,13 @@ import {
   saveSiteConfigFirestore
 } from './lib/firebaseService';
 
+import { 
+  getDeletedIds, 
+  addDeletedId, 
+  removeDeletedId, 
+  mergeCollection 
+} from './lib/storageUtils';
+
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { OrderModal } from './components/OrderModal';
@@ -64,31 +71,41 @@ export default function App() {
   // Orders State
   const [orders, setOrders] = useState<Order[]>(() => {
     const saved = localStorage.getItem('as_orders');
-    return saved ? JSON.parse(saved) : INITIAL_ORDERS;
+    const items: Order[] = saved ? JSON.parse(saved) : INITIAL_ORDERS;
+    const deleted = getDeletedIds('as_deleted_orders');
+    return items.filter(o => !deleted.has(o.id));
   });
 
   // Books State
   const [books, setBooks] = useState<Book[]>(() => {
     const saved = localStorage.getItem('as_books');
-    return saved ? JSON.parse(saved) : INITIAL_BOOKS;
+    const items: Book[] = saved ? JSON.parse(saved) : INITIAL_BOOKS;
+    const deleted = getDeletedIds('as_deleted_books');
+    return items.filter(b => !deleted.has(b.id));
   });
 
   // Blogs State
   const [blogs, setBlogs] = useState<BlogPost[]>(() => {
     const saved = localStorage.getItem('as_blogs');
-    return saved ? JSON.parse(saved) : INITIAL_BLOGS;
+    const items: BlogPost[] = saved ? JSON.parse(saved) : INITIAL_BLOGS;
+    const deleted = getDeletedIds('as_deleted_blogs');
+    return items.filter(b => !deleted.has(b.id));
   });
 
   // Reviews State
   const [reviews, setReviews] = useState<Review[]>(() => {
     const saved = localStorage.getItem('as_reviews');
-    return saved ? JSON.parse(saved) : INITIAL_REVIEWS;
+    const items: Review[] = saved ? JSON.parse(saved) : INITIAL_REVIEWS;
+    const deleted = getDeletedIds('as_deleted_reviews');
+    return items.filter(r => !deleted.has(r.id));
   });
 
   // Inquiries State
   const [inquiries, setInquiries] = useState<InquiryMessage[]>(() => {
     const saved = localStorage.getItem('as_inquiries');
-    return saved ? JSON.parse(saved) : INITIAL_INQUIRIES;
+    const items: InquiryMessage[] = saved ? JSON.parse(saved) : INITIAL_INQUIRIES;
+    const deleted = getDeletedIds('as_deleted_inquiries');
+    return items.filter(i => !deleted.has(i.id));
   });
 
   const [wishlist, setWishlist] = useState<string[]>(() => {
@@ -105,14 +122,41 @@ export default function App() {
   const [isOrderModalOpen, setIsOrderModalOpen] = useState<boolean>(false);
   const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
 
-  // Firebase Real-time Subscriptions
+  // Firebase Real-time Subscriptions with Smart Merging
   useEffect(() => {
-    const unsubBooks = subscribeBooks((data) => setBooks(data));
-    const unsubBlogs = subscribeBlogs((data) => setBlogs(data));
-    const unsubOrders = subscribeOrders((data) => setOrders(data));
-    const unsubReviews = subscribeReviews((data) => setReviews(data));
-    const unsubInquiries = subscribeInquiries((data) => setInquiries(data));
-    const unsubConfig = subscribeSiteConfig((data) => setSiteConfig(data));
+    const unsubBooks = subscribeBooks((data) => {
+      if (data) {
+        setBooks(prev => mergeCollection(data, prev, 'as_deleted_books'));
+      }
+    });
+
+    const unsubBlogs = subscribeBlogs((data) => {
+      if (data) {
+        setBlogs(prev => mergeCollection(data, prev, 'as_deleted_blogs'));
+      }
+    });
+
+    const unsubOrders = subscribeOrders((data) => {
+      if (data) {
+        setOrders(prev => mergeCollection(data, prev, 'as_deleted_orders'));
+      }
+    });
+
+    const unsubReviews = subscribeReviews((data) => {
+      if (data) {
+        setReviews(prev => mergeCollection(data, prev, 'as_deleted_reviews'));
+      }
+    });
+
+    const unsubInquiries = subscribeInquiries((data) => {
+      if (data) {
+        setInquiries(prev => mergeCollection(data, prev, 'as_deleted_inquiries'));
+      }
+    });
+
+    const unsubConfig = subscribeSiteConfig((data) => {
+      if (data) setSiteConfig(data);
+    });
 
     return () => {
       unsubBooks();
@@ -137,29 +181,35 @@ export default function App() {
     }
   }, [blogs, selectedBlog]);
 
+  // Persistent localStorage synchronization
   useEffect(() => {
-    localStorage.setItem('as_site_config', JSON.stringify(siteConfig));
-  }, [siteConfig]);
-
-  useEffect(() => {
-    localStorage.setItem('as_orders', JSON.stringify(orders));
-  }, [orders]);
-
-  useEffect(() => {
-    localStorage.setItem('as_books', JSON.stringify(books));
+    if (books) localStorage.setItem('as_books', JSON.stringify(books));
   }, [books]);
 
   useEffect(() => {
-    localStorage.setItem('as_blogs', JSON.stringify(blogs));
+    if (blogs) localStorage.setItem('as_blogs', JSON.stringify(blogs));
   }, [blogs]);
 
   useEffect(() => {
-    localStorage.setItem('as_reviews', JSON.stringify(reviews));
+    if (orders) localStorage.setItem('as_orders', JSON.stringify(orders));
+  }, [orders]);
+
+  useEffect(() => {
+    if (reviews) localStorage.setItem('as_reviews', JSON.stringify(reviews));
   }, [reviews]);
 
   useEffect(() => {
-    localStorage.setItem('as_inquiries', JSON.stringify(inquiries));
+    if (inquiries) localStorage.setItem('as_inquiries', JSON.stringify(inquiries));
   }, [inquiries]);
+
+  useEffect(() => {
+    if (siteConfig) {
+      localStorage.setItem('as_site_config', JSON.stringify(siteConfig));
+      if (siteConfig.siteName) {
+        document.title = siteConfig.siteName;
+      }
+    }
+  }, [siteConfig]);
 
   useEffect(() => {
     localStorage.setItem('as_wishlist', JSON.stringify(wishlist));
@@ -212,6 +262,7 @@ export default function App() {
 
   const handleAdminLogout = () => {
     setIsAdminAuthenticated(false);
+    localStorage.setItem('as_admin_auth', 'false');
     if (currentView === 'admin') {
       setCurrentView('home');
     }
@@ -242,47 +293,95 @@ export default function App() {
   };
 
   const handleAddBook = (newBook: Book) => {
-    setBooks(prev => [newBook, ...prev]);
+    removeDeletedId('as_deleted_books', newBook.id);
+    setBooks(prev => {
+      const updated = [newBook, ...prev.filter(b => b.id !== newBook.id)];
+      localStorage.setItem('as_books', JSON.stringify(updated));
+      return updated;
+    });
     saveBookFirestore(newBook);
   };
 
   const handleUpdateBook = (updatedBook: Book) => {
-    setBooks(prev => prev.map(b => b.id === updatedBook.id ? updatedBook : b));
+    setBooks(prev => {
+      const updated = prev.map(b => b.id === updatedBook.id ? updatedBook : b);
+      localStorage.setItem('as_books', JSON.stringify(updated));
+      return updated;
+    });
     saveBookFirestore(updatedBook);
   };
 
   const handleDeleteBook = (id: string) => {
-    setBooks(prev => prev.filter(b => b.id !== id));
+    addDeletedId('as_deleted_books', id);
+    setBooks(prev => {
+      const updated = prev.filter(b => b.id !== id);
+      localStorage.setItem('as_books', JSON.stringify(updated));
+      if (selectedBook?.id === id) {
+        setSelectedBook(updated[0] || null);
+      }
+      return updated;
+    });
     deleteBookFirestore(id);
   };
 
   const handleAddBlog = (newBlog: BlogPost) => {
-    setBlogs(prev => [newBlog, ...prev]);
+    removeDeletedId('as_deleted_blogs', newBlog.id);
+    setBlogs(prev => {
+      const updated = [newBlog, ...prev.filter(b => b.id !== newBlog.id)];
+      localStorage.setItem('as_blogs', JSON.stringify(updated));
+      return updated;
+    });
     saveBlogFirestore(newBlog);
   };
 
   const handleUpdateBlog = (updatedBlog: BlogPost) => {
-    setBlogs(prev => prev.map(b => b.id === updatedBlog.id ? updatedBlog : b));
+    setBlogs(prev => {
+      const updated = prev.map(b => b.id === updatedBlog.id ? updatedBlog : b);
+      localStorage.setItem('as_blogs', JSON.stringify(updated));
+      return updated;
+    });
     saveBlogFirestore(updatedBlog);
   };
 
   const handleDeleteBlog = (id: string) => {
-    setBlogs(prev => prev.filter(b => b.id !== id));
+    addDeletedId('as_deleted_blogs', id);
+    setBlogs(prev => {
+      const updated = prev.filter(b => b.id !== id);
+      localStorage.setItem('as_blogs', JSON.stringify(updated));
+      if (selectedBlog?.id === id) {
+        setSelectedBlog(updated[0] || null);
+      }
+      return updated;
+    });
     deleteBlogFirestore(id);
   };
 
   const handleUpdateOrderStatus = (orderId: string, status: Order['status']) => {
-    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
+    setOrders(prev => {
+      const updated = prev.map(o => o.id === orderId ? { ...o, status } : o);
+      localStorage.setItem('as_orders', JSON.stringify(updated));
+      return updated;
+    });
     updateOrderStatusFirestore(orderId, status);
   };
 
   const handleDeleteOrder = (orderId: string) => {
-    setOrders(prev => prev.filter(o => o.id !== orderId));
+    addDeletedId('as_deleted_orders', orderId);
+    setOrders(prev => {
+      const updated = prev.filter(o => o.id !== orderId);
+      localStorage.setItem('as_orders', JSON.stringify(updated));
+      return updated;
+    });
     deleteOrderFirestore(orderId);
   };
 
   const handleDeleteInquiry = (inquiryId: string) => {
-    setInquiries(prev => prev.filter(i => i.id !== inquiryId));
+    addDeletedId('as_deleted_inquiries', inquiryId);
+    setInquiries(prev => {
+      const updated = prev.filter(i => i.id !== inquiryId);
+      localStorage.setItem('as_inquiries', JSON.stringify(updated));
+      return updated;
+    });
     deleteInquiryFirestore(inquiryId);
   };
 
@@ -307,7 +406,12 @@ export default function App() {
   };
 
   const handleDeleteReview = (reviewId: string) => {
-    setReviews(prev => prev.filter(r => r.id !== reviewId));
+    addDeletedId('as_deleted_reviews', reviewId);
+    setReviews(prev => {
+      const updated = prev.filter(r => r.id !== reviewId);
+      localStorage.setItem('as_reviews', JSON.stringify(updated));
+      return updated;
+    });
     deleteReviewFirestore(reviewId);
   };
 
@@ -480,6 +584,7 @@ export default function App() {
         siteConfig={siteConfig}
         onLoginSuccess={() => {
           setIsAdminAuthenticated(true);
+          localStorage.setItem('as_admin_auth', 'true');
           setCurrentView('admin');
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}

@@ -169,9 +169,11 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     >
                       {book.title}
                     </h4>
-                    <p className="text-[11px] text-[#8C887B] font-semibold">
-                      লেখক: <span className="text-[#1D1E20] font-bold">{book.author || 'আহমেদ শরীফ'}</span>
-                    </p>
+                    {(book.author || siteConfig.authorName) && (
+                      <p className="text-[11px] text-[#8C887B] font-semibold">
+                        লেখক: <span className="text-[#1D1E20] font-bold">{book.author || siteConfig.authorName}</span>
+                      </p>
+                    )}
                     <p className="text-xs text-[#5C584E] line-clamp-2 mt-1 font-medium">
                       {book.shortSynopsis || book.fullSynopsis}
                     </p>
@@ -290,9 +292,11 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       >
                         {book.title}
                       </h3>
-                      <p className="text-xs text-[#8C887B] font-semibold">
-                        লেখক: <span className="text-[#1D1E20] font-bold">{book.author || 'আহমেদ শরীফ'}</span>
-                      </p>
+                      {(book.author || siteConfig.authorName) && (
+                        <p className="text-xs text-[#8C887B] font-semibold">
+                          লেখক: <span className="text-[#1D1E20] font-bold">{book.author || siteConfig.authorName}</span>
+                        </p>
+                      )}
                       <p className="text-xs text-[#5C584E] leading-relaxed line-clamp-2 font-medium pt-1">
                         {book.shortSynopsis || book.fullSynopsis}
                       </p>
