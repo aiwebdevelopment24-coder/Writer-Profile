@@ -1,37 +1,41 @@
 import React, { useState } from 'react';
-import { Menu, Search, X, ShoppingBag, LogOut } from 'lucide-react';
-import { ViewMode, SiteConfig } from '../types';
+import { Menu, Search, X, LogOut, User as UserIcon, Heart, LayoutDashboard } from 'lucide-react';
+import { ViewMode, SiteConfig, UserProfile } from '../types';
 
 interface HeaderProps {
   currentView: ViewMode;
   setCurrentView: (view: ViewMode) => void;
-  cartCount: number;
+  cartCount?: number;
+  wishlistCount: number;
   openSearch: () => void;
-  openCart: () => void;
+  openCart?: () => void;
   siteConfig: SiteConfig;
   isAdminAuthenticated: boolean;
   onAdminClick: () => void;
   onAdminLogout: () => void;
+  currentUser: UserProfile | null;
+  onOpenAuthModal: (tab?: 'login' | 'register') => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   currentView,
   setCurrentView,
-  cartCount,
+  wishlistCount,
   openSearch,
-  openCart,
   siteConfig,
   isAdminAuthenticated,
-  onAdminClick,
   onAdminLogout,
+  currentUser,
+  onOpenAuthModal,
 }) => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   const navItems = [
     { id: 'home', label: 'হোম' },
-    { id: 'author', label: 'জীবন ও দর্শন' },
+    { id: 'author', label: 'আমার সম্পর্কে' },
     { id: 'books', label: 'আমার বইসমূহ' },
     { id: 'blog', label: 'নিউজ ও ব্লগ' },
+    { id: 'wishlist', label: 'উইশলিস্ট' },
     { id: 'contact', label: 'যোগাযোগ' }
   ];
 
@@ -49,7 +53,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center space-x-3 rtl:space-x-reverse">
             <button
               onClick={() => setIsDrawerOpen(true)}
-              className="p-2 text-[#3A3834] hover:text-[#C29B47] hover:bg-[#EFECE6] rounded-md transition-colors md:hidden"
+              className="p-2 text-[#3A3834] hover:text-[#C29B47] hover:bg-[#EFECE6] rounded-md transition-colors md:hidden cursor-pointer"
               aria-label="মেনু খুলুন"
             >
               <Menu className="w-6 h-6" />
@@ -57,7 +61,7 @@ export const Header: React.FC<HeaderProps> = ({
 
             <button
               onClick={() => setCurrentView('home')}
-              className="text-left group flex items-center gap-3"
+              className="text-left group flex items-center gap-3 cursor-pointer"
             >
               {siteConfig.siteLogo ? (
                 <img
@@ -75,25 +79,30 @@ export const Header: React.FC<HeaderProps> = ({
                   {siteConfig.siteName || 'জুবায়ের আহমেদ'}
                 </span>
                 <span className="text-[10px] tracking-wider text-[#8C887B] font-medium">
-                  {siteConfig.authorDesignation || 'সাহিত্যিক ও প্রাবন্ধিক'}
+                  {siteConfig.authorDesignation || 'লেখক ও গবেষক'}
                 </span>
               </div>
             </button>
           </div>
 
           {/* Center Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-6 lg:space-x-8">
+          <nav className="hidden md:flex items-center space-x-5 lg:space-x-7">
             {navItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => handleNavClick(item.id)}
-                className={`text-sm font-medium transition-colors py-1 border-b-2 ${
+                className={`text-sm font-medium transition-colors py-1 border-b-2 cursor-pointer flex items-center gap-1.5 ${
                   currentView === item.id
                     ? 'text-[#C29B47] border-[#C29B47] font-semibold'
                     : 'text-[#5C584E] border-transparent hover:text-[#1D1E20] hover:border-[#C29B47]/40'
                 }`}
               >
-                {item.label}
+                <span>{item.label}</span>
+                {item.id === 'wishlist' && wishlistCount > 0 && (
+                  <span className="px-1.5 py-0.2 bg-[#C29B47] text-white text-[10px] rounded-full font-bold">
+                    {wishlistCount}
+                  </span>
+                )}
               </button>
             ))}
           </nav>
@@ -102,17 +111,61 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center space-x-2 sm:space-x-3">
             <button
               onClick={openSearch}
-              className="p-2 text-[#3A3834] hover:text-[#C29B47] hover:bg-[#EFECE6] rounded-full transition-colors"
+              className="p-2 text-[#3A3834] hover:text-[#C29B47] hover:bg-[#EFECE6] rounded-full transition-colors cursor-pointer"
               title="খুঁজুন"
             >
               <Search className="w-5 h-5" />
             </button>
 
+            {/* Wishlist quick icon */}
+            <button
+              onClick={() => setCurrentView('wishlist')}
+              className="p-2 text-[#3A3834] hover:text-rose-600 hover:bg-[#EFECE6] rounded-full transition-colors relative cursor-pointer"
+              title="উইশলিস্ট"
+            >
+              <Heart className={`w-5 h-5 ${wishlistCount > 0 ? 'fill-rose-500 text-rose-500' : ''}`} />
+              {wishlistCount > 0 && (
+                <span className="absolute top-0 right-0 w-4 h-4 bg-rose-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                  {wishlistCount}
+                </span>
+              )}
+            </button>
+
+            {/* User Account / Dashboard Button */}
+            {currentUser ? (
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => setCurrentView('dashboard')}
+                  className={`flex items-center gap-2 py-1 px-3 rounded-full text-xs font-bold transition-all border cursor-pointer ${
+                    currentView === 'dashboard'
+                      ? 'bg-[#1D1E20] text-white border-[#1D1E20]'
+                      : 'bg-[#EFECE6] hover:bg-[#E2DDD3] text-[#1D1E20] border-[#D9D3C7]'
+                  }`}
+                  title="আপনার ড্যাশবোর্ড"
+                >
+                  <div className="w-5 h-5 rounded-full bg-[#C29B47] text-white flex items-center justify-center text-[10px] font-serif-bn font-bold">
+                    {currentUser.name.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="hidden sm:inline max-w-[90px] truncate">{currentUser.name}</span>
+                  <LayoutDashboard className="w-3.5 h-3.5 text-[#C29B47]" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => onOpenAuthModal('login')}
+                className="flex items-center gap-1.5 py-1.5 px-3 bg-[#C29B47] hover:bg-[#a88338] text-white rounded-full text-xs font-bold transition-all shadow-sm cursor-pointer"
+                title="লগইন / একাউন্ট"
+              >
+                <UserIcon className="w-3.5 h-3.5" />
+                <span>লগইন / একাউন্ট</span>
+              </button>
+            )}
+
             {/* Logout button if logged in as Admin */}
             {isAdminAuthenticated && (
               <button
                 onClick={onAdminLogout}
-                className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-full transition-colors"
+                className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-full transition-colors cursor-pointer"
                 title="এডমিন লগআউট"
               >
                 <LogOut className="w-4 h-4" />

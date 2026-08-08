@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Book, Review, ViewMode } from '../types';
-import { Star, ShoppingBag, ArrowLeft, CheckCircle, FileText, ChevronDown, ChevronUp, Trash2, Video } from 'lucide-react';
+import { Book, Review, UserProfile, ViewMode } from '../types';
+import { Star, ShoppingBag, ArrowLeft, CheckCircle, FileText, ChevronDown, ChevronUp, Trash2, Video, Edit3, Save, X } from 'lucide-react';
 import { PdfReaderModal } from '../components/PdfReaderModal';
 import { isYouTubeUrl, getYouTubeEmbedUrl } from '../utils/mediaUtils';
 
@@ -12,8 +12,11 @@ interface SingleBookViewProps {
   onSelectBook: (book: Book) => void;
   onOpenOrderModal: (book?: Book) => void;
   onAddReview: (review: Review) => void;
+  onUpdateReview?: (review: Review) => void;
   onDeleteReview?: (reviewId: string) => void;
   isAdmin?: boolean;
+  currentUser: UserProfile | null;
+  onTriggerAuthRequired: (msg?: string) => void;
 }
 
 export const SingleBookView: React.FC<SingleBookViewProps> = ({
@@ -24,8 +27,11 @@ export const SingleBookView: React.FC<SingleBookViewProps> = ({
   onSelectBook,
   onOpenOrderModal,
   onAddReview,
+  onUpdateReview,
   onDeleteReview,
-  isAdmin = false
+  isAdmin = false,
+  currentUser,
+  onTriggerAuthRequired,
 }) => {
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [newReviewName, setNewReviewName] = useState('');
@@ -34,6 +40,11 @@ export const SingleBookView: React.FC<SingleBookViewProps> = ({
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
   const [isSynopsisExpanded, setIsSynopsisExpanded] = useState(false);
+
+  // Edit State for existing reviews
+  const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
+  const [editRating, setEditRating] = useState<number>(5);
+  const [editComment, setEditComment] = useState<string>('');
 
   // Local storage tracking for public user's own submitted review IDs
   const [myReviewIds, setMyReviewIds] = useState<string[]>(() => {
@@ -51,20 +62,36 @@ export const SingleBookView: React.FC<SingleBookViewProps> = ({
   const synopsisText = book.fullSynopsis || book.shortSynopsis;
   const isLongSynopsis = synopsisText.length > 120;
 
+  const handleToggleReviewForm = () => {
+    if (!currentUser) {
+      onTriggerAuthRequired('রিভিউ লেখার জন্য আপনাকে অবশ্যই একাউন্ট তৈরি করতে হবে বা লগইন করতে হবে।');
+      return;
+    }
+    if (!newReviewName && currentUser) {
+      setNewReviewName(currentUser.name);
+    }
+    setShowReviewForm(!showReviewForm);
+  };
+
   const handleReviewSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentUser) {
+      onTriggerAuthRequired('রিভিউ পোস্ট করার জন্য আপনার একটি একাউন্ট থাকা আবশ্যক।');
+      return;
+    }
+
     if (!newReviewName || !newReviewComment) return;
 
     const newId = `rev-${Date.now()}`;
     const newRev: Review = {
       id: newId,
       bookId: book.id,
-      reviewerName: newReviewName,
-      reviewerTitle: 'পাঠক',
+      reviewerName: newReviewName || currentUser.name,
+      reviewerTitle: 'নিবন্ধিত পাঠক',
       rating: newReviewRating,
-      date: 'আজ',
+      date: new Date().toLocaleDateString('bn-BD', { year: 'numeric', month: 'long', day: 'numeric' }),
       comment: newReviewComment,
-      authorKey: 'my-local-review'
+      authorKey: currentUser.id || currentUser.emailOrPhone,
     };
 
     onAddReview(newRev);
@@ -85,6 +112,23 @@ export const SingleBookView: React.FC<SingleBookViewProps> = ({
       setNewReviewName('');
       setNewReviewComment('');
     }, 2000);
+  };
+
+  const startEditReview = (rev: Review) => {
+    setEditingReviewId(rev.id);
+    setEditRating(rev.rating);
+    setEditComment(rev.comment);
+  };
+
+  const handleSaveEditedReview = (rev: Review) => {
+    if (!editComment.trim()) return;
+    const updated: Review = {
+      ...rev,
+      rating: editRating,
+      comment: editComment.trim(),
+    };
+    onUpdateReview?.(updated);
+    setEditingReviewId(null);
   };
 
   const handleDelete = (revId: string) => {
@@ -290,8 +334,8 @@ export const SingleBookView: React.FC<SingleBookViewProps> = ({
           </div>
 
           <button
-            onClick={() => setShowReviewForm(!showReviewForm)}
-            className="px-4 py-2 bg-[#1D1E20] text-white text-xs font-semibold rounded-xl hover:bg-[#C29B47] transition-colors"
+            onClick={handleToggleReviewForm}
+            className="px-4 py-2 bg-[#1D1E20] text-white text-xs font-semibold rounded-xl hover:bg-[#C29B47] transition-colors cursor-pointer"
           >
             রিভিউ লিখুন
           </button>
@@ -304,7 +348,7 @@ export const SingleBookView: React.FC<SingleBookViewProps> = ({
             {reviewSubmitted ? (
               <div className="flex items-center gap-2 text-emerald-600 font-semibold text-xs py-2">
                 <CheckCircle className="w-5 h-5" />
-                <span>ধন্যবাদ! আপনার রিভিউটি যুক্ত হয়েছে।</span>
+                <span>ধন্যবাদ! আপনার রিভিউটি সফলভাবে যুক্ত হয়েছে।</span>
               </div>
             ) : (
               <form onSubmit={handleReviewSubmit} className="space-y-3">
@@ -330,6 +374,8 @@ export const SingleBookView: React.FC<SingleBookViewProps> = ({
                       <option value={5}>৫ তারকা (অসাধারণ)</option>
                       <option value={4}>৪ তারকা (খুব ভালো)</option>
                       <option value={3}>৩ তারকা (মোটামুটি)</option>
+                      <option value={2}>২ তারকা (সাধারণ)</option>
+                      <option value={1}>১ তারকা (খারাপ)</option>
                     </select>
                   </div>
                 </div>
@@ -338,7 +384,7 @@ export const SingleBookView: React.FC<SingleBookViewProps> = ({
                   <textarea
                     required
                     rows={3}
-                    placeholder="বইটি সম্পর্কে আপনার সৎ মতামত শেয়ার করুন..."
+                    placeholder="বইটি সম্পর্কে আপনার মতামত প্রকাশ করুন..."
                     value={newReviewComment}
                     onChange={(e) => setNewReviewComment(e.target.value)}
                     className="w-full px-3 py-2 text-xs bg-[#F9F8F5] border border-[#D9D3C7] rounded-lg focus:outline-none focus:border-[#C29B47]"
@@ -347,16 +393,16 @@ export const SingleBookView: React.FC<SingleBookViewProps> = ({
                 <div className="flex items-center gap-2 pt-1">
                   <button
                     type="submit"
-                    className="px-5 py-2.5 bg-[#C29B47] text-white text-xs font-bold rounded-lg hover:bg-[#a88338] transition-colors shadow-sm"
+                    className="px-5 py-2.5 bg-[#C29B47] text-white text-xs font-bold rounded-lg hover:bg-[#a88338] transition-colors shadow-sm cursor-pointer"
                   >
-                    সাবমিট করুন
+                    পোস্ট করুন
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowReviewForm(false)}
-                    className="px-4 py-2.5 bg-[#F9F8F5] border border-[#D9D3C7] text-[#1D1E20] text-xs font-bold rounded-lg hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition-colors"
+                    className="px-4 py-2.5 bg-[#F9F8F5] border border-[#D9D3C7] text-[#1D1E20] text-xs font-bold rounded-lg hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition-colors cursor-pointer"
                   >
-                    বাদ দিন
+                    বাতিল
                   </button>
                 </div>
               </form>
@@ -367,36 +413,101 @@ export const SingleBookView: React.FC<SingleBookViewProps> = ({
         {/* Reviews Cards List */}
         <div className="space-y-4">
           {bookReviews.map((rev) => {
-            const isMyReview = myReviewIds.includes(rev.id) || rev.authorKey === 'my-local-review';
-            const canDelete = isAdmin || isMyReview;
+            const isOwner = currentUser && (
+              rev.authorKey === currentUser.id ||
+              rev.authorKey === currentUser.emailOrPhone ||
+              rev.reviewerName === currentUser.name
+            );
+            const isMyReview = isOwner || myReviewIds.includes(rev.id) || rev.authorKey === 'my-local-review';
+            const canEdit = isOwner || isMyReview;
+            const canDelete = isAdmin || isOwner || isMyReview;
+            const isEditing = editingReviewId === rev.id;
 
             return (
-              <div key={rev.id} className="bg-white p-5 rounded-2xl border border-[#E6E2D8] space-y-2 shadow-sm relative group">
+              <div key={rev.id} className="bg-white p-5 rounded-2xl border border-[#E6E2D8] space-y-3 shadow-sm relative group">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1 text-amber-500">
-                    {[...Array(rev.rating)].map((_, i) => (
+                    {[...Array(isEditing ? editRating : rev.rating)].map((_, i) => (
                       <Star key={i} className="w-3.5 h-3.5 fill-current" />
                     ))}
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-[11px] text-[#8C887B]">{rev.date}</span>
-                    {canDelete && (
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-[#8C887B] mr-1">{rev.date}</span>
+                    
+                    {canEdit && !isEditing && (
+                      <button
+                        type="button"
+                        onClick={() => startEditReview(rev)}
+                        className="px-2 py-1 text-[#C29B47] hover:bg-[#C29B47]/10 rounded-lg transition-colors flex items-center gap-1 text-[11px] font-bold cursor-pointer"
+                        title="রিভিউ এডিট করুন"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                        <span>এডিট</span>
+                      </button>
+                    )}
+
+                    {canDelete && !isEditing && (
                       <button
                         type="button"
                         onClick={() => handleDelete(rev.id)}
-                        className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors flex items-center gap-1 text-[11px] font-bold"
+                        className="px-2 py-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors flex items-center gap-1 text-[11px] font-bold cursor-pointer"
                         title="রিভিউটি মুছে ফেলুন"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-3 h-3" />
                         <span>মুছে ফেলুন</span>
                       </button>
                     )}
                   </div>
                 </div>
 
-                <p className="text-xs text-[#3A3834] font-serif-bn italic leading-relaxed">
-                  "{rev.comment}"
-                </p>
+                {isEditing ? (
+                  <div className="space-y-3 pt-1 border-t border-[#E6E2D8]">
+                    <div className="flex items-center gap-3">
+                      <label className="text-xs font-bold text-[#3A3834]">রেটিং দিন:</label>
+                      <select
+                        value={editRating}
+                        onChange={(e) => setEditRating(Number(e.target.value))}
+                        className="px-2 py-1 text-xs bg-[#F9F8F5] border border-[#D9D3C7] rounded-lg"
+                      >
+                        <option value={5}>৫ তারকা</option>
+                        <option value={4}>৪ তারকা</option>
+                        <option value={3}>৩ তারকা</option>
+                        <option value={2}>২ তারকা</option>
+                        <option value={1}>১ তারকা</option>
+                      </select>
+                    </div>
+
+                    <textarea
+                      rows={3}
+                      value={editComment}
+                      onChange={(e) => setEditComment(e.target.value)}
+                      className="w-full px-3 py-2 text-xs bg-[#F9F8F5] border border-[#D9D3C7] rounded-lg focus:outline-none focus:border-[#C29B47]"
+                    />
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleSaveEditedReview(rev)}
+                        className="px-3 py-1.5 bg-[#C29B47] text-white text-xs font-bold rounded-lg hover:bg-[#a88338] transition-colors flex items-center gap-1 cursor-pointer"
+                      >
+                        <Save className="w-3.5 h-3.5" />
+                        <span>সংরক্ষণ করুন</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingReviewId(null)}
+                        className="px-3 py-1.5 bg-[#F9F8F5] text-[#5C584E] text-xs font-bold rounded-lg border border-[#D9D3C7] hover:bg-[#EFECE6] transition-colors cursor-pointer"
+                      >
+                        বাতিল
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-[#3A3834] font-serif-bn italic leading-relaxed">
+                    "{rev.comment}"
+                  </p>
+                )}
 
                 <div className="flex items-center gap-2 pt-1">
                   <div className="w-7 h-7 rounded-full bg-[#1D1E20] text-white font-bold text-xs flex items-center justify-center">

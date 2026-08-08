@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ViewMode, Book, BlogPost, EventItem, InquiryMessage, Review, SiteConfig, Order } from './types';
+import { ViewMode, Book, BlogPost, EventItem, InquiryMessage, Review, SiteConfig, Order, UserProfile, BlogComment } from './types';
 import { 
   INITIAL_BOOKS, 
   INITIAL_BLOGS, 
@@ -7,7 +7,8 @@ import {
   INITIAL_INQUIRIES, 
   INITIAL_REVIEWS,
   DEFAULT_SITE_CONFIG,
-  INITIAL_ORDERS
+  INITIAL_ORDERS,
+  INITIAL_BLOG_COMMENTS
 } from './data/initialData';
 
 import { 
@@ -44,6 +45,8 @@ import { Footer } from './components/Footer';
 import { OrderModal } from './components/OrderModal';
 import { AdminLoginModal } from './components/AdminLoginModal';
 import { SearchModal } from './components/SearchModal';
+import { AuthModal } from './components/AuthModal';
+import { AuthRequiredModal } from './components/AuthRequiredModal';
 
 import { HomeView } from './views/HomeView';
 import { AuthorBioView } from './views/AuthorBioView';
@@ -54,6 +57,8 @@ import { BlogView } from './views/BlogView';
 import { SingleBlogView } from './views/SingleBlogView';
 import { ContactView } from './views/ContactView';
 import { AdminStudioView } from './views/AdminStudioView';
+import { WishlistView } from './views/WishlistView';
+import { DashboardView } from './views/DashboardView';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<ViewMode>('home');
@@ -61,6 +66,40 @@ export default function App() {
     return localStorage.getItem('as_admin_auth') === 'true';
   });
   const [isAdminLoginOpen, setIsAdminLoginOpen] = useState<boolean>(false);
+
+  // User Auth State
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
+    try {
+      const saved = localStorage.getItem('as_current_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const [authModalTab, setAuthModalTab] = useState<'login' | 'register' | 'reset'>('login');
+  const [isAuthRequiredOpen, setIsAuthRequiredOpen] = useState<boolean>(false);
+  const [authRequiredMsg, setAuthRequiredMsg] = useState<string>('এই সুবিধাটি ব্যবহার করার জন্য আপনার একাউন্ট প্রয়োজন।');
+
+  const triggerAuthRequired = (customMsg?: string) => {
+    if (customMsg) setAuthRequiredMsg(customMsg);
+    setIsAuthRequiredOpen(true);
+  };
+
+  const handleUserLoginSuccess = (user: UserProfile) => {
+    setCurrentUser(user);
+    try {
+      localStorage.setItem('as_current_user', JSON.stringify(user));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleUserLogout = () => {
+    setCurrentUser(null);
+    localStorage.removeItem('as_current_user');
+  };
 
   // Site Config State (Synced with Firebase & LocalStorage)
   const [siteConfig, setSiteConfig] = useState<SiteConfig>(() => {
@@ -106,6 +145,14 @@ export default function App() {
     const items: InquiryMessage[] = saved ? JSON.parse(saved) : INITIAL_INQUIRIES;
     const deleted = getDeletedIds('as_deleted_inquiries');
     return items.filter(i => !deleted.has(i.id));
+  });
+
+  // Blog Comments State
+  const [blogComments, setBlogComments] = useState<BlogComment[]>(() => {
+    const saved = localStorage.getItem('as_blog_comments');
+    const items: BlogComment[] = saved ? JSON.parse(saved) : INITIAL_BLOG_COMMENTS;
+    const deleted = getDeletedIds('as_deleted_blog_comments');
+    return items.filter(c => !deleted.has(c.id));
   });
 
   const [wishlist, setWishlist] = useState<string[]>(() => {
@@ -201,6 +248,10 @@ export default function App() {
   useEffect(() => {
     if (inquiries) localStorage.setItem('as_inquiries', JSON.stringify(inquiries));
   }, [inquiries]);
+
+  useEffect(() => {
+    if (blogComments) localStorage.setItem('as_blog_comments', JSON.stringify(blogComments));
+  }, [blogComments]);
 
   useEffect(() => {
     if (siteConfig) {
@@ -385,24 +436,75 @@ export default function App() {
     deleteInquiryFirestore(inquiryId);
   };
 
-  const handleAddInquiry = (newInquiry: { senderName: string; senderEmail: string; subject: string; message: string }) => {
+  const handleAddInquiry = (newInquiry: { senderName: string; senderEmail?: string; subject: string; message: string; userKey?: string }) => {
     const item: InquiryMessage = {
       id: `inq-${Date.now()}`,
       senderName: newInquiry.senderName,
       senderEmail: newInquiry.senderEmail,
       subject: newInquiry.subject,
       message: newInquiry.message,
+      userKey: newInquiry.userKey,
       date: new Date().toLocaleDateString('bn-BD'),
       timeAgo: 'মাত্র এখন',
       isRead: false,
+      replies: []
     };
     setInquiries(prev => [item, ...prev]);
     addInquiryFirestore(item);
   };
 
+  const handleReplyInquiry = (inquiryId: string, replyMessage: string) => {
+    setInquiries(prev => {
+      const updated = prev.map(inq => {
+        if (inq.id === inquiryId) {
+          const newReply = {
+            id: `rep-${Date.now()}`,
+            sender: (currentUser ? 'user' : 'admin') as 'user' | 'admin',
+            senderName: currentUser ? currentUser.name : 'লেখক / টিমের উত্তর',
+            message: replyMessage,
+            date: new Date().toLocaleDateString('bn-BD') + ' ' + new Date().toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' })
+          };
+          const existingReplies = inq.replies || [];
+          const updatedItem = {
+            ...inq,
+            replies: [...existingReplies, newReply],
+            adminReply: currentUser ? inq.adminReply : replyMessage
+          };
+          addInquiryFirestore(updatedItem);
+          return updatedItem;
+        }
+        return inq;
+      });
+      localStorage.setItem('as_inquiries', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleAddBlogComment = (newComment: BlogComment) => {
+    setBlogComments(prev => [newComment, ...prev]);
+  };
+
+  const handleUpdateBlogComment = (updatedComment: BlogComment) => {
+    setBlogComments(prev => prev.map(c => c.id === updatedComment.id ? updatedComment : c));
+  };
+
+  const handleDeleteBlogComment = (commentId: string) => {
+    addDeletedId('as_deleted_blog_comments', commentId);
+    setBlogComments(prev => prev.filter(c => c.id !== commentId));
+  };
+
   const handleAddReview = (newReview: Review) => {
     setReviews(prev => [newReview, ...prev]);
     saveReviewFirestore(newReview);
+  };
+
+  const handleUpdateReview = (updatedReview: Review) => {
+    setReviews(prev => {
+      const updated = prev.map(r => r.id === updatedReview.id ? updatedReview : r);
+      localStorage.setItem('as_reviews', JSON.stringify(updated));
+      return updated;
+    });
+    saveReviewFirestore(updatedReview);
   };
 
   const handleDeleteReview = (reviewId: string) => {
@@ -433,6 +535,11 @@ export default function App() {
           isAdminAuthenticated={isAdminAuthenticated}
           onAdminClick={handleAdminClick}
           onAdminLogout={handleAdminLogout}
+          currentUser={currentUser}
+          onOpenAuthModal={(tab) => {
+            setAuthModalTab(tab || 'login');
+            setIsAuthModalOpen(true);
+          }}
         />
       )}
 
@@ -489,8 +596,11 @@ export default function App() {
             onSelectBook={handleSelectBook}
             onOpenOrderModal={handleOpenOrderModal}
             onAddReview={handleAddReview}
+            onUpdateReview={handleUpdateReview}
             onDeleteReview={handleDeleteReview}
             isAdmin={isAdminAuthenticated}
+            currentUser={currentUser}
+            onTriggerAuthRequired={triggerAuthRequired}
           />
         )}
 
@@ -523,11 +633,64 @@ export default function App() {
               setCurrentView(v);
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
+            comments={blogComments}
+            onAddComment={handleAddBlogComment}
+            onUpdateComment={handleUpdateBlogComment}
+            onDeleteComment={handleDeleteBlogComment}
+            currentUser={currentUser}
+            onTriggerAuthRequired={triggerAuthRequired}
+            isAdmin={isAdminAuthenticated}
           />
         )}
 
         {currentView === 'contact' && (
-          <ContactView siteConfig={siteConfig} onSendMessage={handleAddInquiry} />
+          <ContactView 
+            siteConfig={siteConfig} 
+            onSendMessage={handleAddInquiry} 
+            currentUser={currentUser}
+            onTriggerAuthRequired={triggerAuthRequired}
+            userInquiries={inquiries}
+            onReplyInquiry={handleReplyInquiry}
+          />
+        )}
+
+        {currentView === 'wishlist' && (
+          <WishlistView
+            books={books}
+            wishlistIds={wishlist}
+            onToggleWishlist={toggleWishlist}
+            setCurrentView={(v) => {
+              setCurrentView(v);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onSelectBook={handleSelectBook}
+            onOpenOrderModal={handleOpenOrderModal}
+          />
+        )}
+
+        {currentView === 'dashboard' && currentUser && (
+          <DashboardView
+            currentUser={currentUser}
+            orders={orders}
+            reviews={reviews}
+            blogComments={blogComments}
+            inquiries={inquiries}
+            books={books}
+            wishlistIds={wishlist}
+            onToggleWishlist={toggleWishlist}
+            onUpdateReview={handleUpdateReview}
+            onDeleteReview={handleDeleteReview}
+            onUpdateComment={handleUpdateBlogComment}
+            onDeleteComment={handleDeleteBlogComment}
+            onReplyInquiry={handleReplyInquiry}
+            onLogout={handleUserLogout}
+            setCurrentView={(v) => {
+              setCurrentView(v);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onSelectBook={handleSelectBook}
+            onOpenOrderModal={handleOpenOrderModal}
+          />
         )}
 
         {currentView === 'admin' && (
@@ -565,8 +728,6 @@ export default function App() {
         />
       )}
 
-
-
       {/* Cash-on-Delivery Order Modal */}
       <OrderModal
         isOpen={isOrderModalOpen}
@@ -575,6 +736,29 @@ export default function App() {
         selectedBook={orderModalBook}
         siteConfig={siteConfig}
         onPlaceOrder={handlePlaceOrder}
+        currentUser={currentUser}
+        onTriggerAuthRequired={triggerAuthRequired}
+      />
+
+      {/* Auth Required Popup */}
+      <AuthRequiredModal
+        isOpen={isAuthRequiredOpen}
+        onClose={() => setIsAuthRequiredOpen(false)}
+        onOpenAuthModal={(tab) => {
+          setAuthModalTab(tab || 'register');
+          setIsAuthModalOpen(true);
+        }}
+        actionMessage={authRequiredMsg}
+      />
+
+      {/* Reader Login / Registration / Reset Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        initialTab={authModalTab}
+        currentUser={currentUser}
+        onLoginSuccess={handleUserLoginSuccess}
+        onLogout={handleUserLogout}
       />
 
       {/* Admin Login Gate Modal */}

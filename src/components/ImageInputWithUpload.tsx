@@ -1,5 +1,6 @@
-import React, { useRef } from 'react';
-import { Upload, X, Image as ImageIcon } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { Upload, X, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { uploadImageToImgBB } from '../utils/uploadUtils';
 
 interface ImageInputWithUploadProps {
   label: string;
@@ -19,14 +20,25 @@ export const ImageInputWithUpload: React.FC<ImageInputWithUploadProps> = ({
   placeholder = 'https://... বা ছবি আপলোড করুন',
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        alert('ছবিটির সাইজ ৫ মেগাবাইটের বেশি। অনুগ্রহ করে ছোট ছবি নির্বাচন করুন।');
-        return;
-      }
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert('ছবিটির সাইজ ১০ মেগাবাইটের বেশি। অনুগ্রহ করে ছোট ছবি নির্বাচন করুন।');
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      // Direct upload to ImgBB API
+      const imageUrl = await uploadImageToImgBB(file);
+      onChange(imageUrl);
+    } catch (err: any) {
+      console.warn('ImgBB upload error, falling back to local data URL:', err);
+      // Fallback to FileReader base64 if ImgBB network fails
       const reader = new FileReader();
       reader.onloadend = () => {
         if (typeof reader.result === 'string') {
@@ -34,6 +46,11 @@ export const ImageInputWithUpload: React.FC<ImageInputWithUploadProps> = ({
         }
       };
       reader.readAsDataURL(file);
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -45,11 +62,21 @@ export const ImageInputWithUpload: React.FC<ImageInputWithUploadProps> = ({
         </label>
         <button
           type="button"
+          disabled={isUploading}
           onClick={() => fileInputRef.current?.click()}
-          className="px-3 py-1.5 bg-[#C29B47] hover:bg-[#a88338] text-white text-[11px] font-bold rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
+          className="px-3 py-1.5 bg-[#C29B47] hover:bg-[#a88338] disabled:bg-gray-400 text-white text-[11px] font-bold rounded-lg transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
         >
-          <Upload className="w-3.5 h-3.5" />
-          <span>ছবি বেছে নিন / আপলোড</span>
+          {isUploading ? (
+            <>
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <span>ImgBB তে আপলোড হচ্ছে...</span>
+            </>
+          ) : (
+            <>
+              <Upload className="w-3.5 h-3.5" />
+              <span>ছবি বেছে নিন (ImgBB)</span>
+            </>
+          )}
         </button>
       </div>
 
@@ -80,7 +107,7 @@ export const ImageInputWithUpload: React.FC<ImageInputWithUploadProps> = ({
           <button
             type="button"
             onClick={() => onChange('')}
-            className="p-2 border border-rose-200 text-rose-600 hover:bg-rose-50 rounded-xl transition-colors shrink-0"
+            className="p-2 border border-rose-200 text-rose-600 hover:bg-rose-50 rounded-xl transition-colors shrink-0 cursor-pointer"
             title="ছবি রিমুভ করুন"
           >
             <X className="w-4 h-4" />
@@ -96,3 +123,4 @@ export const ImageInputWithUpload: React.FC<ImageInputWithUploadProps> = ({
     </div>
   );
 };
+

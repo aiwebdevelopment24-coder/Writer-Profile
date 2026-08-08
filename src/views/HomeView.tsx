@@ -138,7 +138,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             {displayNewReleases.map((book) => (
               <div
                 key={book.id}
-                className="bg-white p-5 rounded-2xl border border-[#E6E2D8] hover:shadow-xl transition-shadow duration-300 flex gap-5 group min-h-[180px]"
+                className="bg-white p-5 rounded-2xl border border-[#E6E2D8] hover:shadow-xl transition-shadow duration-300 flex gap-5 group min-h-[180px] overflow-hidden"
               >
                 <div 
                   className="w-28 h-36 shrink-0 rounded-lg overflow-hidden shadow-md cursor-pointer bg-[#EFECE6] relative aspect-[2/3]"
@@ -158,23 +158,23 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   )}
                 </div>
 
-                <div className="flex-1 flex flex-col justify-between py-1">
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-bold uppercase text-[#C29B47]">
+                <div className="flex-1 min-w-0 flex flex-col justify-between py-1 overflow-hidden">
+                  <div className="space-y-1 min-w-0">
+                    <span className="text-[10px] font-bold uppercase text-[#C29B47] block truncate">
                       {book.category}
                     </span>
                     <h4 
                       onClick={() => onSelectBook(book)}
-                      className="font-serif-bn font-bold text-lg text-[#1D1E20] group-hover:text-[#C29B47] cursor-pointer transition-colors leading-snug"
+                      className="font-serif-bn font-bold text-lg text-[#1D1E20] group-hover:text-[#C29B47] cursor-pointer transition-colors leading-snug line-clamp-2 break-words overflow-hidden"
                     >
                       {book.title}
                     </h4>
                     {(book.author || siteConfig.authorName) && (
-                      <p className="text-[11px] text-[#8C887B] font-semibold">
+                      <p className="text-[11px] text-[#8C887B] font-semibold truncate">
                         লেখক: <span className="text-[#1D1E20] font-bold">{book.author || siteConfig.authorName}</span>
                       </p>
                     )}
-                    <p className="text-xs text-[#5C584E] line-clamp-2 mt-1 font-medium">
+                    <p className="text-xs text-[#5C584E] line-clamp-2 mt-1 font-medium break-words">
                       {book.shortSynopsis || book.fullSynopsis}
                     </p>
                   </div>
@@ -281,23 +281,23 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     </div>
                   </div>
 
-                  <div className="p-6 flex-1 flex flex-col justify-between space-y-4">
-                    <div className="space-y-1.5">
-                      <span className="text-xs font-bold text-[#C29B47] uppercase tracking-wider">
+                  <div className="p-6 flex-1 min-w-0 flex flex-col justify-between space-y-4 overflow-hidden">
+                    <div className="space-y-1.5 min-w-0">
+                      <span className="text-xs font-bold text-[#C29B47] uppercase tracking-wider block truncate">
                         {book.category}
                       </span>
                       <h3 
                         onClick={() => onSelectBook(book)}
-                        className="font-serif-bn font-bold text-xl text-[#1D1E20] group-hover:text-[#C29B47] cursor-pointer transition-colors leading-snug"
+                        className="font-serif-bn font-bold text-xl text-[#1D1E20] group-hover:text-[#C29B47] cursor-pointer transition-colors leading-snug line-clamp-2 break-words overflow-hidden"
                       >
                         {book.title}
                       </h3>
                       {(book.author || siteConfig.authorName) && (
-                        <p className="text-xs text-[#8C887B] font-semibold">
+                        <p className="text-xs text-[#8C887B] font-semibold truncate">
                           লেখক: <span className="text-[#1D1E20] font-bold">{book.author || siteConfig.authorName}</span>
                         </p>
                       )}
-                      <p className="text-xs text-[#5C584E] leading-relaxed line-clamp-2 font-medium pt-1">
+                      <p className="text-xs text-[#5C584E] leading-relaxed line-clamp-2 font-medium pt-1 break-words">
                         {book.shortSynopsis || book.fullSynopsis}
                       </p>
                     </div>
@@ -313,23 +313,23 @@ export const HomeView: React.FC<HomeViewProps> = ({
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 shrink-0">
                         {book.pdfUrl && (
                           <button
                             onClick={() => setActivePdfBook(book)}
-                            className="px-2.5 py-2 min-h-[40px] bg-[#F9F8F5] border border-[#D9D3C7] text-[#1D1E20] text-xs font-bold rounded-xl hover:bg-[#EFECE6] transition-colors flex items-center gap-1 active:scale-95"
+                            className="px-2.5 py-2 min-h-[40px] bg-[#F9F8F5] border border-[#D9D3C7] text-[#1D1E20] text-xs font-bold rounded-xl hover:bg-[#EFECE6] transition-colors flex items-center gap-1 active:scale-95 whitespace-nowrap"
                             title="একটু পড়ুন"
                           >
-                            <FileText className="w-3.5 h-3.5 text-[#C29B47]" />
-                            <span>একটু পড়ুন</span>
+                            <FileText className="w-3.5 h-3.5 text-[#C29B47] shrink-0" />
+                            <span className="whitespace-nowrap">একটু পড়ুন</span>
                           </button>
                         )}
                         <button
                           onClick={() => onOpenOrderModal(book)}
-                          className="px-3.5 py-2 min-h-[40px] bg-[#C29B47] hover:bg-[#a88338] text-white text-xs font-bold rounded-xl shadow transition-colors flex items-center gap-1.5 active:scale-95"
+                          className="px-3.5 py-2 min-h-[40px] bg-[#C29B47] hover:bg-[#a88338] text-white text-xs font-bold rounded-xl shadow transition-colors flex items-center gap-1.5 active:scale-95 whitespace-nowrap"
                         >
-                          <ShoppingCart className="w-3.5 h-3.5" />
-                          <span>বই অর্ডার করুন</span>
+                          <ShoppingCart className="w-3.5 h-3.5 shrink-0" />
+                          <span className="whitespace-nowrap">বই অর্ডার করুন</span>
                         </button>
                       </div>
                     </div>

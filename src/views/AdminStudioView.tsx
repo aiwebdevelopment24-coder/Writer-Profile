@@ -517,13 +517,24 @@ export const AdminStudioView: React.FC<AdminStudioViewProps> = ({
               </div>
             </div>
 
-            {/* Footer Text */}
-            <div className="md:col-span-2 space-y-1">
-              <label className="block text-xs font-bold text-[#3A3834]">ফুটার টেক্সট (Footer Custom Text - ফুটারে লেখকের নামের নিচে দেখাবে)</label>
+            {/* Footer Text Options */}
+            <div className="space-y-1">
+              <label className="block text-xs font-bold text-[#3A3834]">লেখকের নামের নিচে ফুটারের বিবরণ (Footer Subtext)</label>
               <input
                 type="text"
-                placeholder="যেমন: সাহিত্যিক ও প্রাবন্ধিক"
-                value={configForm.footerText}
+                placeholder="যেমন: সমকালীন কথাসাহিত্যে এক অন্য ঘরানার পথচলা।"
+                value={configForm.footerSubtext || ''}
+                onChange={(e) => setConfigForm({ ...configForm, footerSubtext: e.target.value })}
+                className="w-full px-4 py-3 bg-[#F9F8F5] border border-[#D9D3C7] rounded-xl text-xs text-[#1D1E20] focus:outline-none focus:border-[#C29B47]"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="block text-xs font-bold text-[#3A3834]">একদম নিচের কপিরাইট টেক্সট (Bottom Footer Copyright)</label>
+              <input
+                type="text"
+                placeholder="যেমন: © ২০২৪ জুবায়ের আহমেদ। সর্বস্বত্ব সংরক্ষিত।"
+                value={configForm.footerText || ''}
                 onChange={(e) => setConfigForm({ ...configForm, footerText: e.target.value })}
                 className="w-full px-4 py-3 bg-[#F9F8F5] border border-[#D9D3C7] rounded-xl text-xs text-[#1D1E20] focus:outline-none focus:border-[#C29B47]"
               />

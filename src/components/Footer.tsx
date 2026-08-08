@@ -24,9 +24,9 @@ export const Footer: React.FC<FooterProps> = ({ setCurrentView, siteConfig, onAd
             <p className="text-sm font-semibold text-[#C29B47]">
               {siteConfig.authorDesignation || 'সাহিত্যিক ও প্রাবন্ধিক'}
             </p>
-            {siteConfig.footerText && (
+            {siteConfig.footerSubtext && (
               <p className="text-xs text-[#5C584E] mt-1.5 max-w-md leading-relaxed">
-                {siteConfig.footerText}
+                {siteConfig.footerSubtext}
               </p>
             )}
           </div>

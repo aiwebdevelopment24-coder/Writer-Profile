@@ -7,6 +7,8 @@ export type ViewMode =
   | 'blog' 
   | 'single-blog' 
   | 'contact' 
+  | 'wishlist'
+  | 'dashboard'
   | 'admin';
 
 export type AdminSubTab = 'overview' | 'site' | 'books' | 'orders' | 'blogs' | 'author' | 'messages' | 'reviews';
@@ -28,6 +30,7 @@ export interface SiteConfig {
   heroButtonText: string;
   rokomariLink?: string;
   footerText: string;
+  footerSubtext?: string;
   contactEmail: string;
   contactPhone?: string;
   dhakaCityDeliveryFee?: number;
@@ -64,6 +67,7 @@ export interface Order {
   totalPrice: number;
   status: 'pending' | 'confirmed' | 'delivered' | 'cancelled';
   orderDate: string;
+  userKey?: string;
 }
 
 export interface Book {
@@ -107,6 +111,16 @@ export interface Review {
   authorKey?: string;
 }
 
+export interface BlogComment {
+  id: string;
+  blogId: string;
+  userName: string;
+  userEmailOrPhone?: string;
+  userKey?: string;
+  date: string;
+  comment: string;
+}
+
 export interface BlogPost {
   id: string;
   title: string;
@@ -131,16 +145,37 @@ export interface EventItem {
   iconType: 'calendar' | 'video';
 }
 
+export interface InquiryReply {
+  id: string;
+  sender: 'user' | 'admin';
+  senderName: string;
+  message: string;
+  date: string;
+}
+
 export interface InquiryMessage {
   id: string;
   senderName: string;
-  senderEmail: string;
+  senderEmail?: string;
+  senderPhone?: string;
+  userKey?: string;
   subject: string;
   message: string;
   date: string;
   timeAgo: string;
   isRead: boolean;
   isUrgent?: boolean;
+  adminReply?: string;
+  replies?: InquiryReply[];
+}
+
+export interface UserProfile {
+  id: string;
+  name: string;
+  emailOrPhone: string;
+  password?: string;
+  avatarUrl?: string;
+  createdAt?: string;
 }
 
 export interface Accolade {

@@ -118,23 +118,23 @@ export const BooksView: React.FC<BooksViewProps> = ({
                 </div>
 
                 {/* Details */}
-                <div className="p-5 sm:p-6 flex-1 flex flex-col justify-between space-y-4">
-                  <div className="space-y-1.5">
-                    <span className="text-xs font-bold text-[#C29B47] uppercase tracking-wider">
+                <div className="p-5 sm:p-6 flex-1 min-w-0 flex flex-col justify-between space-y-4 overflow-hidden">
+                  <div className="space-y-1.5 min-w-0">
+                    <span className="text-xs font-bold text-[#C29B47] uppercase tracking-wider block truncate">
                       {book.category}
                     </span>
                     <h3 
                       onClick={() => onSelectBook(book)}
-                      className="font-serif-bn font-bold text-lg sm:text-xl text-[#1D1E20] group-hover:text-[#C29B47] cursor-pointer transition-colors leading-snug"
+                      className="font-serif-bn font-bold text-lg sm:text-xl text-[#1D1E20] group-hover:text-[#C29B47] cursor-pointer transition-colors leading-snug line-clamp-2 break-words overflow-hidden"
                     >
                       {book.title}
                     </h3>
                     {book.author && (
-                      <p className="text-xs text-[#8C887B] font-semibold">
+                      <p className="text-xs text-[#8C887B] font-semibold truncate">
                         লেখক: <span className="text-[#1D1E20] font-bold">{book.author}</span>
                       </p>
                     )}
-                    <p className="text-xs text-[#5C584E] leading-relaxed line-clamp-2 font-medium pt-1">
+                    <p className="text-xs text-[#5C584E] leading-relaxed line-clamp-2 font-medium pt-1 break-words">
                       {book.shortSynopsis || book.fullSynopsis}
                     </p>
                   </div>

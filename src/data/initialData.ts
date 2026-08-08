@@ -1,4 +1,4 @@
-import { Book, BlogPost, EventItem, InquiryMessage, Accolade, Review, SiteConfig, Order } from '../types';
+import { Book, BlogPost, EventItem, InquiryMessage, Accolade, Review, SiteConfig, Order, BlogComment } from '../types';
 
 export const DEFAULT_SITE_CONFIG: SiteConfig = {
   siteName: 'জুবায়ের আহমেদ',
@@ -17,6 +17,7 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
   heroButtonText: 'বই অর্ডার করুন',
   rokomariLink: 'https://www.rokomari.com',
   footerText: '© ২০২৪ জুবায়ের আহমেদ। সর্বস্বত্ব সংরক্ষিত।',
+  footerSubtext: 'সমকালীন কথাসাহিত্যে এক অন্য ঘরানার পথচলা। অনুভূতির নিপুণ অলঙ্করণ ও জীবনবোধ।',
   contactEmail: 'contact@jubayerahmed.com',
   contactPhone: '+880 1700-000000',
   dhakaCityDeliveryFee: 50,
@@ -429,3 +430,21 @@ export const INITIAL_INQUIRIES: InquiryMessage[] = [
     isRead: true
   }
 ];
+
+export const INITIAL_BLOG_COMMENTS: BlogComment[] = [
+  {
+    id: 'cmt-1',
+    blogId: 'blog-1',
+    userName: 'আব্দুল্লাহ আল মাসউদ',
+    date: '১৫ মার্চ, ২০২৪',
+    comment: 'চমৎকার একটি লেখা। বাংলা কথাসাহিত্যের বিবর্তন নিয়ে আপনার বিশ্লেষণটি অত্যন্ত প্রাঞ্জল ও সময়োপযোগী।'
+  },
+  {
+    id: 'cmt-2',
+    blogId: 'blog-2',
+    userName: 'নাসরিন সুলতানা',
+    date: '১৮ মার্চ, ২০২৪',
+    comment: 'নিঃসঙ্গতার দর্শন নিয়ে এই অংশটি পড়ে খুব ভালো লাগলো। মনের ভেতরে গভীর রেখাপাত করে।'
+  }
+];
+

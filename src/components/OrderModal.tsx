@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, ShoppingBag, CheckCircle2, Truck, Phone, MapPin, User, BookOpen, Plus, Trash2 } from 'lucide-react';
-import { Book, Order, SiteConfig } from '../types';
+import { Book, Order, SiteConfig, UserProfile } from '../types';
 
 interface OrderModalProps {
   isOpen: boolean;
@@ -9,6 +9,8 @@ interface OrderModalProps {
   selectedBook?: Book | null;
   siteConfig?: SiteConfig;
   onPlaceOrder: (order: Omit<Order, 'id' | 'orderDate' | 'status'>) => void;
+  currentUser: UserProfile | null;
+  onTriggerAuthRequired: (msg?: string) => void;
 }
 
 interface CartItem {
@@ -24,6 +26,8 @@ export const OrderModal: React.FC<OrderModalProps> = ({
   selectedBook,
   siteConfig,
   onPlaceOrder,
+  currentUser,
+  onTriggerAuthRequired,
 }) => {
   const publishedBooks = books.filter(b => b.status === 'published' || !b.status);
   const availableBooks = publishedBooks.length > 0 ? publishedBooks : books;
@@ -39,12 +43,18 @@ export const OrderModal: React.FC<OrderModalProps> = ({
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const [orderRef, setOrderRef] = useState<string>('');
 
-  // Synchronize cart when selectedBook changes or modal opens
+  // Synchronize cart & prefill user details when selectedBook changes or modal opens
   useEffect(() => {
-    if (isOpen && defaultBook?.id) {
-      setCartItems([{ id: `item-${Date.now()}`, bookId: defaultBook.id, quantity: 1 }]);
+    if (isOpen) {
+      if (defaultBook?.id) {
+        setCartItems([{ id: `item-${Date.now()}`, bookId: defaultBook.id, quantity: 1 }]);
+      }
+      if (currentUser) {
+        if (!customerName) setCustomerName(currentUser.name);
+        if (!customerPhone) setCustomerPhone(currentUser.emailOrPhone);
+      }
     }
-  }, [isOpen, selectedBook]);
+  }, [isOpen, selectedBook, currentUser]);
 
   if (!isOpen) return null;
 
@@ -112,6 +122,13 @@ export const OrderModal: React.FC<OrderModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!currentUser) {
+      onClose();
+      onTriggerAuthRequired('বই অর্ডার করার জন্য আপনাকে অবশ্যই একাউন্ট তৈরি করতে হবে বা লগইন করতে হবে।');
+      return;
+    }
+
     if (!customerName || !customerPhone || !customerAddress) return;
 
     // Format books summary title for administration & notifications

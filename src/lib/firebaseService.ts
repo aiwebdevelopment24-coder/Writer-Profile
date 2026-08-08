@@ -47,21 +47,34 @@ const handleFirestoreError = (error: any, action: string, path: string) => {
   }
 };
 
+// Helper to ensure seeding only happens once and empty collections stay empty after deletion
+const shouldSeedCollection = (collectionName: string): boolean => {
+  const seedKey = `as_has_seeded_${collectionName}`;
+  const seeded = localStorage.getItem(seedKey);
+  if (seeded === 'true') return false;
+  localStorage.setItem(seedKey, 'true');
+  return true;
+};
+
 // ==================== BOOKS ====================
 export const fetchBooksFirestore = async (): Promise<Book[] | null> => {
   try {
     const colRef = collection(db, 'books');
     const snapshot = await getDocs(colRef);
     if (snapshot.empty) {
-      try {
-        for (const book of INITIAL_BOOKS) {
-          await setDoc(doc(db, 'books', book.id), book);
+      if (shouldSeedCollection('books')) {
+        try {
+          for (const book of INITIAL_BOOKS) {
+            await setDoc(doc(db, 'books', book.id), book);
+          }
+        } catch (e) {
+          handleFirestoreError(e, 'seed', 'books');
         }
-      } catch (e) {
-        handleFirestoreError(e, 'seed', 'books');
+        return INITIAL_BOOKS;
       }
-      return INITIAL_BOOKS;
+      return [];
     } else {
+      localStorage.setItem('as_has_seeded_books', 'true');
       const items: Book[] = [];
       snapshot.forEach((docSnap) => {
         items.push({ id: docSnap.id, ...docSnap.data() } as Book);
@@ -76,20 +89,23 @@ export const fetchBooksFirestore = async (): Promise<Book[] | null> => {
 
 export const subscribeBooks = (onUpdate: (books: Book[]) => void) => {
   const colRef = collection(db, 'books');
-  let loadedFromFirestore = false;
 
   return onSnapshot(colRef, async (snapshot) => {
-    loadedFromFirestore = true;
     if (snapshot.empty) {
-      try {
-        for (const book of INITIAL_BOOKS) {
-          await setDoc(doc(db, 'books', book.id), book);
+      if (shouldSeedCollection('books')) {
+        try {
+          for (const book of INITIAL_BOOKS) {
+            await setDoc(doc(db, 'books', book.id), book);
+          }
+        } catch (e) {
+          handleFirestoreError(e, 'seed', 'books');
         }
-      } catch (e) {
-        handleFirestoreError(e, 'seed', 'books');
+        onUpdate(INITIAL_BOOKS);
+      } else {
+        onUpdate([]);
       }
-      onUpdate(INITIAL_BOOKS);
     } else {
+      localStorage.setItem('as_has_seeded_books', 'true');
       const items: Book[] = [];
       snapshot.forEach((docSnap) => {
         items.push({ id: docSnap.id, ...docSnap.data() } as Book);
@@ -121,20 +137,23 @@ export const deleteBookFirestore = async (bookId: string) => {
 // ==================== BLOGS ====================
 export const subscribeBlogs = (onUpdate: (blogs: BlogPost[]) => void) => {
   const colRef = collection(db, 'blogs');
-  let loadedFromFirestore = false;
 
   return onSnapshot(colRef, async (snapshot) => {
-    loadedFromFirestore = true;
     if (snapshot.empty) {
-      try {
-        for (const blog of INITIAL_BLOGS) {
-          await setDoc(doc(db, 'blogs', blog.id), cleanObject(blog));
+      if (shouldSeedCollection('blogs')) {
+        try {
+          for (const blog of INITIAL_BLOGS) {
+            await setDoc(doc(db, 'blogs', blog.id), cleanObject(blog));
+          }
+        } catch (e) {
+          handleFirestoreError(e, 'seed', 'blogs');
         }
-      } catch (e) {
-        handleFirestoreError(e, 'seed', 'blogs');
+        onUpdate(INITIAL_BLOGS);
+      } else {
+        onUpdate([]);
       }
-      onUpdate(INITIAL_BLOGS);
     } else {
+      localStorage.setItem('as_has_seeded_blogs', 'true');
       const items: BlogPost[] = [];
       snapshot.forEach((docSnap) => {
         items.push({ id: docSnap.id, ...docSnap.data() } as BlogPost);
@@ -143,9 +162,6 @@ export const subscribeBlogs = (onUpdate: (blogs: BlogPost[]) => void) => {
     }
   }, (err) => {
     handleFirestoreError(err, 'listen', 'blogs');
-    if (!loadedFromFirestore) {
-      // Retain initial local state
-    }
   });
 };
 
@@ -180,20 +196,23 @@ export const deleteBlogFirestore = async (blogId: string) => {
 // ==================== ORDERS ====================
 export const subscribeOrders = (onUpdate: (orders: Order[]) => void) => {
   const colRef = collection(db, 'orders');
-  let loadedFromFirestore = false;
 
   return onSnapshot(colRef, async (snapshot) => {
-    loadedFromFirestore = true;
     if (snapshot.empty) {
-      try {
-        for (const order of INITIAL_ORDERS) {
-          await setDoc(doc(db, 'orders', order.id), order);
+      if (shouldSeedCollection('orders')) {
+        try {
+          for (const order of INITIAL_ORDERS) {
+            await setDoc(doc(db, 'orders', order.id), order);
+          }
+        } catch (e) {
+          handleFirestoreError(e, 'seed', 'orders');
         }
-      } catch (e) {
-        handleFirestoreError(e, 'seed', 'orders');
+        onUpdate(INITIAL_ORDERS);
+      } else {
+        onUpdate([]);
       }
-      onUpdate(INITIAL_ORDERS);
     } else {
+      localStorage.setItem('as_has_seeded_orders', 'true');
       const items: Order[] = [];
       snapshot.forEach((docSnap) => {
         items.push({ id: docSnap.id, ...docSnap.data() } as Order);
@@ -202,9 +221,6 @@ export const subscribeOrders = (onUpdate: (orders: Order[]) => void) => {
     }
   }, (err) => {
     handleFirestoreError(err, 'listen', 'orders');
-    if (!loadedFromFirestore) {
-      // Retain initial local state
-    }
   });
 };
 
@@ -236,20 +252,23 @@ export const deleteOrderFirestore = async (orderId: string) => {
 // ==================== REVIEWS ====================
 export const subscribeReviews = (onUpdate: (reviews: Review[]) => void) => {
   const colRef = collection(db, 'reviews');
-  let loadedFromFirestore = false;
 
   return onSnapshot(colRef, async (snapshot) => {
-    loadedFromFirestore = true;
     if (snapshot.empty) {
-      try {
-        for (const review of INITIAL_REVIEWS) {
-          await setDoc(doc(db, 'reviews', review.id), cleanObject(review));
+      if (shouldSeedCollection('reviews')) {
+        try {
+          for (const review of INITIAL_REVIEWS) {
+            await setDoc(doc(db, 'reviews', review.id), cleanObject(review));
+          }
+        } catch (e) {
+          handleFirestoreError(e, 'seed', 'reviews');
         }
-      } catch (e) {
-        handleFirestoreError(e, 'seed', 'reviews');
+        onUpdate(INITIAL_REVIEWS);
+      } else {
+        onUpdate([]);
       }
-      onUpdate(INITIAL_REVIEWS);
     } else {
+      localStorage.setItem('as_has_seeded_reviews', 'true');
       const items: Review[] = [];
       snapshot.forEach((docSnap) => {
         items.push({ id: docSnap.id, ...docSnap.data() } as Review);
@@ -258,9 +277,6 @@ export const subscribeReviews = (onUpdate: (reviews: Review[]) => void) => {
     }
   }, (err) => {
     handleFirestoreError(err, 'listen', 'reviews');
-    if (!loadedFromFirestore) {
-      // Retain initial local state
-    }
   });
 };
 
@@ -283,20 +299,23 @@ export const deleteReviewFirestore = async (reviewId: string) => {
 // ==================== INQUIRIES / MESSAGES ====================
 export const subscribeInquiries = (onUpdate: (inquiries: InquiryMessage[]) => void) => {
   const colRef = collection(db, 'inquiries');
-  let loadedFromFirestore = false;
 
   return onSnapshot(colRef, async (snapshot) => {
-    loadedFromFirestore = true;
     if (snapshot.empty) {
-      try {
-        for (const inq of INITIAL_INQUIRIES) {
-          await setDoc(doc(db, 'inquiries', inq.id), cleanObject(inq));
+      if (shouldSeedCollection('inquiries')) {
+        try {
+          for (const inq of INITIAL_INQUIRIES) {
+            await setDoc(doc(db, 'inquiries', inq.id), cleanObject(inq));
+          }
+        } catch (e) {
+          handleFirestoreError(e, 'seed', 'inquiries');
         }
-      } catch (e) {
-        handleFirestoreError(e, 'seed', 'inquiries');
+        onUpdate(INITIAL_INQUIRIES);
+      } else {
+        onUpdate([]);
       }
-      onUpdate(INITIAL_INQUIRIES);
     } else {
+      localStorage.setItem('as_has_seeded_inquiries', 'true');
       const items: InquiryMessage[] = [];
       snapshot.forEach((docSnap) => {
         items.push({ id: docSnap.id, ...docSnap.data() } as InquiryMessage);
@@ -305,9 +324,6 @@ export const subscribeInquiries = (onUpdate: (inquiries: InquiryMessage[]) => vo
     }
   }, (err) => {
     handleFirestoreError(err, 'listen', 'inquiries');
-    if (!loadedFromFirestore) {
-      // Retain initial local state
-    }
   });
 };
 
