@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Book, BlogPost, EventItem, ViewMode, SiteConfig, Review } from '../types';
-import { ShoppingCart, Sparkles, ArrowRight, FileText, Eye } from 'lucide-react';
+import { ShoppingCart, Sparkles, ArrowRight, FileText, Heart, Eye } from 'lucide-react';
 import { PdfReaderModal } from '../components/PdfReaderModal';
 import { BookCoverImage } from '../components/BookCoverImage';
 
@@ -14,6 +14,8 @@ interface HomeViewProps {
   onSelectBook: (book: Book) => void;
   onSelectBlog?: (blog: BlogPost) => void;
   onOpenOrderModal: (book?: Book) => void;
+  wishlistIds?: string[];
+  onToggleWishlist?: (bookId: string) => void;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -25,6 +27,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
   onSelectBook,
   onSelectBlog,
   onOpenOrderModal,
+  wishlistIds = [],
+  onToggleWishlist,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('সবগুলো');
   const [activePdfBook, setActivePdfBook] = useState<Book | null>(null);
@@ -60,7 +64,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   return (
     <div className="space-y-16 pb-16 animate-fade-in">
       
-      {/* 1. HERO SECTION (Separate Background Image and Featured Card Image) */}
+      {/* 1. HERO SECTION */}
       <section className="relative overflow-hidden bg-[#EFECE6] border border-[#E2DDD3] text-[#1D1E20] rounded-2xl sm:rounded-3xl mx-3 sm:mx-6 lg:mx-8 shadow-sm mt-3 sm:mt-4">
         {/* Soft Background Image */}
         <div 
@@ -91,7 +95,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <div className="pt-1 sm:pt-2">
               <button
                 onClick={() => setCurrentView('author')}
-                className="px-7 sm:px-8 py-3 sm:py-3.5 bg-[#C29B47] hover:bg-[#a88338] text-white text-xs sm:text-sm font-bold rounded-xl shadow-md transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-2"
+                className="px-7 sm:px-8 py-3 sm:py-3.5 bg-[#C29B47] hover:bg-[#a88338] text-white text-xs sm:text-sm font-bold rounded-xl shadow-md transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-2 cursor-pointer"
               >
                 <span>বিস্তারিত</span>
                 <ArrowRight className="w-4 h-4" />
@@ -99,7 +103,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </div>
           </div>
 
-          {/* Featured Hero Card Image - Retains natural uploaded image size and proportions */}
+          {/* Featured Hero Card Image */}
           <div className="md:col-span-5 flex justify-center items-center pt-2 md:pt-0">
             <div className="rounded-2xl overflow-hidden shadow-xl border-2 sm:border-4 border-white bg-white relative mx-auto max-w-xs sm:max-w-sm">
               <img
@@ -127,88 +131,104 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </div>
             <button
               onClick={() => setCurrentView('books')}
-              className="text-xs font-bold text-[#C29B47] hover:text-[#1D1E20] transition-colors flex items-center gap-1 py-1 px-2 rounded-lg"
+              className="text-xs font-bold text-[#C29B47] hover:text-[#1D1E20] transition-colors flex items-center gap-1 py-1 px-2 rounded-lg cursor-pointer"
             >
               <span>সবগুলো দেখুন</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 min-h-[180px]">
-            {displayNewReleases.map((book) => (
-              <div
-                key={book.id}
-                className="bg-white p-5 rounded-2xl border border-[#E6E2D8] hover:shadow-xl transition-shadow duration-300 flex gap-5 group min-h-[180px] overflow-hidden"
-              >
-                <div 
-                  className="w-28 h-36 shrink-0 rounded-lg overflow-hidden shadow-md cursor-pointer bg-[#EFECE6] relative aspect-[2/3]"
-                  onClick={() => onSelectBook(book)}
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {displayNewReleases.map((book) => {
+              const isWishlisted = wishlistIds.includes(book.id);
+              return (
+                <div
+                  key={book.id}
+                  className="bg-white p-4 sm:p-5 rounded-2xl border border-[#E6E2D8] hover:shadow-xl transition-shadow duration-300 flex flex-col sm:flex-row gap-4 group"
                 >
-                  <BookCoverImage
-                    src={book.coverImage}
-                    alt={book.title}
-                    containerClassName="w-28 h-36 rounded-lg"
-                    className="group-hover:scale-105 transition-transform duration-300 will-change-transform"
-                    showSpine={false}
-                  />
-                  {book.isNewRelease && (
-                    <span className="absolute top-2 left-2 bg-[#C29B47] text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow z-10">
-                      নতুন
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex-1 min-w-0 flex flex-col justify-between py-1 overflow-hidden">
-                  <div className="space-y-1 min-w-0">
-                    <span className="text-[10px] font-bold uppercase text-[#C29B47] block truncate">
-                      {book.category}
-                    </span>
-                    <h4 
-                      onClick={() => onSelectBook(book)}
-                      className="font-serif-bn font-bold text-lg text-[#1D1E20] group-hover:text-[#C29B47] cursor-pointer transition-colors leading-snug line-clamp-2 break-words overflow-hidden"
-                    >
-                      {book.title}
-                    </h4>
-                    {(book.author || siteConfig.authorName) && (
-                      <p className="text-[11px] text-[#8C887B] font-semibold truncate">
-                        লেখক: <span className="text-[#1D1E20] font-bold">{book.author || siteConfig.authorName}</span>
-                      </p>
+                  <div 
+                    className="w-28 h-40 shrink-0 rounded-lg overflow-hidden shadow-md cursor-pointer bg-[#EFECE6] relative aspect-[2/3] mx-auto sm:mx-0"
+                    onClick={() => onSelectBook(book)}
+                  >
+                    <BookCoverImage
+                      src={book.coverImage}
+                      alt={book.title}
+                      containerClassName="w-28 h-40 rounded-lg"
+                      className="group-hover:scale-105 transition-transform duration-300"
+                      showSpine={false}
+                    />
+                    {book.isNewRelease && (
+                      <span className="absolute top-2 left-2 bg-[#C29B47] text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow z-10">
+                        নতুন
+                      </span>
                     )}
-                    <p className="text-xs text-[#5C584E] line-clamp-2 mt-1 font-medium break-words">
-                      {book.shortSynopsis || book.fullSynopsis}
-                    </p>
+                    {onToggleWishlist && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onToggleWishlist(book.id);
+                        }}
+                        className="absolute top-2 right-2 p-1.5 bg-white/90 backdrop-blur-sm rounded-full shadow hover:scale-110 transition-transform z-10 cursor-pointer"
+                        title="উইশলিস্টে রাখুন"
+                      >
+                        <Heart className={`w-3.5 h-3.5 ${isWishlisted ? 'fill-rose-500 text-rose-500' : 'text-[#8C887B]'}`} />
+                      </button>
+                    )}
                   </div>
 
-                  <div className="pt-2 flex items-center justify-between gap-2 border-t border-[#F2EFE9] mt-2">
-                    <div className="flex flex-col">
+                  <div className="flex-1 min-w-0 flex flex-col justify-between py-1">
+                    <div className="space-y-1 min-w-0">
+                      <span className="text-[10px] font-bold uppercase text-[#C29B47] block truncate">
+                        {book.category}
+                      </span>
+                      <h4 
+                        onClick={() => onSelectBook(book)}
+                        className="font-serif-bn font-bold text-base sm:text-lg text-[#1D1E20] group-hover:text-[#C29B47] cursor-pointer transition-colors leading-snug truncate"
+                        title={book.title}
+                      >
+                        {book.title}
+                      </h4>
+                      {(book.author || siteConfig.authorName) && (
+                        <p className="text-[11px] text-[#8C887B] font-semibold truncate">
+                          লেখক: <span className="text-[#1D1E20] font-bold">{book.author || siteConfig.authorName}</span>
+                        </p>
+                      )}
+                      <p className="text-xs text-[#5C584E] line-clamp-2 mt-1 font-medium break-words">
+                        {book.shortSynopsis || book.fullSynopsis}
+                      </p>
+                    </div>
+
+                    <div className="pt-3 border-t border-[#F2EFE9] mt-2 space-y-2">
                       <div className="flex items-baseline gap-1.5">
                         <span className="font-serif-bn font-bold text-base text-[#1D1E20]">৳{book.price}</span>
                         {book.originalPrice && book.originalPrice > book.price && (
                           <span className="text-xs text-[#8C887B] line-through font-serif-bn">৳{book.originalPrice}</span>
                         )}
                       </div>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      {book.pdfUrl && (
+
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {book.pdfUrl && (
+                          <button
+                            onClick={() => setActivePdfBook(book)}
+                            className="px-2.5 py-1.5 min-h-[36px] bg-[#F9F8F5] border border-[#D9D3C7] text-[#1D1E20] text-[11px] font-bold rounded-lg hover:bg-[#EFECE6] flex items-center gap-1 active:scale-95 transition-colors whitespace-nowrap cursor-pointer"
+                          >
+                            <FileText className="w-3 h-3 text-[#C29B47]" />
+                            <span>একটু পড়ুন</span>
+                          </button>
+                        )}
                         <button
-                          onClick={() => setActivePdfBook(book)}
-                          className="px-2.5 py-2 min-h-[38px] bg-[#F9F8F5] border border-[#D9D3C7] text-[#1D1E20] text-[10px] font-bold rounded-lg hover:bg-[#EFECE6] flex items-center gap-1 active:scale-95 transition-colors"
+                          onClick={() => onOpenOrderModal(book)}
+                          className="px-3.5 py-2 min-h-[36px] bg-[#1D1E20] hover:bg-[#C29B47] text-white text-[11px] font-bold rounded-lg transition-all transform hover:-translate-y-0.5 hover:shadow-lg active:scale-95 flex items-center gap-1.5 whitespace-nowrap cursor-pointer shrink-0 group/orderbtn"
                         >
-                          <FileText className="w-3 h-3 text-[#C29B47]" />
-                          <span>একটু পড়ুন</span>
+                          <ShoppingCart className="w-3.5 h-3.5 transition-transform group-hover/orderbtn:scale-110 group-hover/orderbtn:-rotate-12" />
+                          <span>বই অর্ডার করুন</span>
                         </button>
-                      )}
-                      <button
-                        onClick={() => onOpenOrderModal(book)}
-                        className="px-3 py-2 min-h-[38px] bg-[#1D1E20] hover:bg-[#C29B47] text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1 active:scale-95"
-                      >
-                        <span>অর্ডার</span>
-                      </button>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       )}
@@ -233,7 +253,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-4 py-2.5 min-h-[40px] rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+                className={`px-4 py-2.5 min-h-[40px] rounded-full text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
                   selectedCategory === cat
                     ? 'bg-[#1D1E20] text-white shadow-md'
                     : 'bg-[#EFECE6] text-[#5C584E] hover:bg-[#E2DDD3]'
@@ -247,15 +267,16 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
         {/* 3 Book Cards Grid */}
         {homeDisplayBooks.length > 0 ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 min-h-[460px]">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             {homeDisplayBooks.map((book) => {
+              const isWishlisted = wishlistIds.includes(book.id);
               return (
                 <div
                   key={book.id}
-                  className="bg-white border border-[#E6E2D8] rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-shadow duration-300 flex flex-col group h-full min-h-[440px]"
+                  className="bg-white border border-[#E6E2D8] rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-shadow duration-300 flex flex-col group h-full"
                 >
                   <div 
-                    className="relative bg-[#EFECE6] p-6 flex items-center justify-center overflow-hidden min-h-[240px]"
+                    className="relative bg-[#EFECE6] p-6 flex items-center justify-center overflow-hidden min-h-[250px]"
                   >
                     {book.isNewRelease && (
                       <span className="absolute top-4 left-4 bg-[#C29B47] text-white text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wider shadow z-10">
@@ -263,32 +284,39 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       </span>
                     )}
 
-                    {book.originalPrice && book.originalPrice > book.price && (
-                      <span className="absolute top-4 right-4 bg-rose-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-md shadow z-10">
-                        {Math.round(((book.originalPrice - book.price) / book.originalPrice) * 100)}% ছাড়
-                      </span>
+                    {onToggleWishlist && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onToggleWishlist(book.id);
+                        }}
+                        className="absolute top-4 right-4 p-2 bg-white/90 backdrop-blur-sm rounded-full shadow hover:scale-110 transition-transform z-10 cursor-pointer"
+                        title="উইশলিস্টে রাখুন"
+                      >
+                        <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-rose-500 text-rose-500' : 'text-[#8C887B]'}`} />
+                      </button>
                     )}
-                    
+
                     <div 
                       onClick={() => onSelectBook(book)}
-                      className="w-40 h-56 rounded-r-lg rounded-l-sm shadow-2xl transform group-hover:scale-105 transition-transform duration-300 will-change-transform relative overflow-hidden book-shadow cursor-pointer shrink-0 aspect-[2/3]"
+                      className="w-36 h-52 sm:w-40 sm:h-56 rounded-r-lg rounded-l-sm shadow-2xl transform group-hover:scale-105 transition-transform duration-300 will-change-transform relative overflow-hidden book-shadow cursor-pointer shrink-0 aspect-[2/3]"
                     >
                       <BookCoverImage
                         src={book.coverImage}
                         alt={book.title}
-                        containerClassName="w-40 h-56 rounded-r-lg rounded-l-sm"
+                        containerClassName="w-36 h-52 sm:w-40 sm:h-56 rounded-r-lg rounded-l-sm"
                       />
                     </div>
                   </div>
 
-                  <div className="p-6 flex-1 min-w-0 flex flex-col justify-between space-y-4 overflow-hidden">
+                  <div className="p-5 sm:p-6 flex-1 min-w-0 flex flex-col justify-between space-y-4">
                     <div className="space-y-1.5 min-w-0">
                       <span className="text-xs font-bold text-[#C29B47] uppercase tracking-wider block truncate">
                         {book.category}
                       </span>
                       <h3 
                         onClick={() => onSelectBook(book)}
-                        className="font-serif-bn font-bold text-xl text-[#1D1E20] group-hover:text-[#C29B47] cursor-pointer transition-colors leading-snug line-clamp-2 break-words overflow-hidden"
+                        className="font-serif-bn font-bold text-lg sm:text-xl text-[#1D1E20] group-hover:text-[#C29B47] cursor-pointer transition-colors leading-snug line-clamp-2 break-words"
                       >
                         {book.title}
                       </h3>
@@ -302,10 +330,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       </p>
                     </div>
 
-                    <div className="pt-2 flex items-center justify-between gap-3 border-t border-[#E6E2D8]">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] text-[#8C887B]">মূল্য</span>
+                    <div className="pt-3 border-t border-[#E6E2D8] space-y-3">
+                      <div className="flex items-center justify-between text-xs">
                         <div className="flex items-baseline gap-1.5">
+                          <span className="text-[11px] text-[#8C887B]">মূল্য:</span>
                           <span className="font-serif-bn font-bold text-lg text-[#1D1E20]">৳{book.price}</span>
                           {book.originalPrice && book.originalPrice > book.price && (
                             <span className="text-xs text-[#8C887B] line-through font-serif-bn">৳{book.originalPrice}</span>
@@ -313,24 +341,25 @@ export const HomeView: React.FC<HomeViewProps> = ({
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-1.5 shrink-0">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => onOpenOrderModal(book)}
+                          className="flex-1 py-2.5 min-h-[42px] bg-[#C29B47] hover:bg-[#a88338] text-white text-xs font-bold rounded-xl shadow transition-colors flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap active:scale-95"
+                        >
+                          <ShoppingCart className="w-3.5 h-3.5 shrink-0" />
+                          <span className="whitespace-nowrap">বই অর্ডার করুন</span>
+                        </button>
+
                         {book.pdfUrl && (
                           <button
                             onClick={() => setActivePdfBook(book)}
-                            className="px-2.5 py-2 min-h-[40px] bg-[#F9F8F5] border border-[#D9D3C7] text-[#1D1E20] text-xs font-bold rounded-xl hover:bg-[#EFECE6] transition-colors flex items-center gap-1 active:scale-95 whitespace-nowrap"
+                            className="px-3 py-2.5 min-h-[42px] bg-[#F9F8F5] border border-[#D9D3C7] text-[#1D1E20] text-xs font-bold rounded-xl hover:bg-[#EFECE6] transition-colors flex items-center gap-1 cursor-pointer whitespace-nowrap shrink-0 active:scale-95"
                             title="একটু পড়ুন"
                           >
                             <FileText className="w-3.5 h-3.5 text-[#C29B47] shrink-0" />
                             <span className="whitespace-nowrap">একটু পড়ুন</span>
                           </button>
                         )}
-                        <button
-                          onClick={() => onOpenOrderModal(book)}
-                          className="px-3.5 py-2 min-h-[40px] bg-[#C29B47] hover:bg-[#a88338] text-white text-xs font-bold rounded-xl shadow transition-colors flex items-center gap-1.5 active:scale-95 whitespace-nowrap"
-                        >
-                          <ShoppingCart className="w-3.5 h-3.5 shrink-0" />
-                          <span className="whitespace-nowrap">বই অর্ডার করুন</span>
-                        </button>
                       </div>
                     </div>
                   </div>

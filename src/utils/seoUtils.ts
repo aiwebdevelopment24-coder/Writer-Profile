@@ -27,7 +27,8 @@ export function updateSEOMeta({
     case 'single-book':
       if (selectedBook) {
         title = `${selectedBook.title} - ${authorName} এর বই`;
-        description = selectedBook.summary ? selectedBook.summary.slice(0, 160) : `${selectedBook.title} বইটি কিনুন। মূল্য: ৳ ${selectedBook.price}`;
+        const bookDesc = selectedBook.shortSynopsis || selectedBook.fullSynopsis;
+        description = bookDesc ? bookDesc.slice(0, 160) : `${selectedBook.title} বইটি কিনুন। মূল্য: ৳ ${selectedBook.price}`;
       }
       break;
     case 'blog':
@@ -40,17 +41,9 @@ export function updateSEOMeta({
         description = selectedBlog.excerpt ? selectedBlog.excerpt.slice(0, 160) : selectedBlog.title;
       }
       break;
-    case 'accolades':
-      title = `স্বীকৃতি ও সম্মাননা | ${authorName}`;
-      description = `${authorName}-এর সাহিত্য জীবনের অর্জন, পদক ও বিশিষ্ট সম্মাননা তালিকা।`;
-      break;
-    case 'events':
-      title = `ইভেন্ট ও কার্যক্রম | ${authorName}`;
-      description = `${authorName}-এর আগামী বইমেলা, পাঠক আড্ডা ও সাহিত্য সভার সূচি।`;
-      break;
-    case 'gallery':
-      title = `গ্যালারি | ${authorName}`;
-      description = `${authorName}-এর সাহিত্য জীবনের ফটো গ্যালারি ও চিত্রমালা।`;
+    case 'author':
+      title = `লেখক পরিচিতি | ${authorName}`;
+      description = `${authorName}-এর জীবনকথা, সাহিত্যদর্শন ও জীবনী।`;
       break;
     case 'contact':
       title = `যোগাযোগ | ${authorName}`;

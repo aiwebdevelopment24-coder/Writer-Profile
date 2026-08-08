@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { Book, BlogPost, InquiryMessage, AdminSubTab, SiteConfig, Order, Review } from '../types';
 import { ImageInputWithUpload } from '../components/ImageInputWithUpload';
 import { 
-  BookOpen, Eye, Mail, TrendingUp, Plus, Edit, Trash2, 
+  BookOpen, Eye, Mail, TrendingUp, Plus, Edit, Edit3, Trash2, 
   Search, CheckCircle, Clock, FileText, ArrowUpRight, 
   X, Filter, Settings, User, ShoppingBag, Check, ShieldAlert,
-  Globe, LayoutDashboard, Bold, Type, Link, Sparkles, Upload, Star
+  Globe, LayoutDashboard, Bold, Type, Link, Sparkles, Upload, Star, Send
 } from 'lucide-react';
 
 interface AdminStudioViewProps {
@@ -25,6 +25,10 @@ interface AdminStudioViewProps {
   onUpdateOrderStatus: (orderId: string, status: Order['status']) => void;
   onDeleteOrder: (orderId: string) => void;
   onDeleteInquiry: (inquiryId: string) => void;
+  onReplyInquiry?: (inquiryId: string, message: string, responderName?: string, imageUrl?: string) => void;
+  onDeleteInquiryReply?: (inquiryId: string, replyId: string) => void;
+  onEditInquiryMessage?: (inquiryId: string, message: string) => void;
+  onEditInquiryReply?: (inquiryId: string, replyId: string, message: string) => void;
   onDeleteReview?: (id: string) => void;
 }
 
@@ -45,10 +49,26 @@ export const AdminStudioView: React.FC<AdminStudioViewProps> = ({
   onUpdateOrderStatus,
   onDeleteOrder,
   onDeleteInquiry,
+  onReplyInquiry,
+  onDeleteInquiryReply,
+  onEditInquiryMessage,
+  onEditInquiryReply,
   onDeleteReview
 }) => {
   const [activeTab, setActiveTab] = useState<AdminSubTab>('site');
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
+  const [adminReplyImage, setAdminReplyImage] = useState<string | null>(null);
+  const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
+
+  // Selected Inquiry State (derived for instant updates)
+  const [selectedInquiryId, setSelectedInquiryId] = useState<string | null>(null);
+  const [adminReplyText, setAdminReplyText] = useState('');
+  const [adminResponderName, setAdminResponderName] = useState(siteConfig.authorName || 'রাইয়ান প্রকাশন');
+  const [editingMsgKey, setEditingMsgKey] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState<string>('');
+  const [orderStatusFilter, setOrderStatusFilter] = useState<string>('all');
+
+  const selectedInquiry = inquiries.find(i => i.id === selectedInquiryId) || inquiries[0] || null;
 
   // Site Config Form Local State
   const [configForm, setConfigForm] = useState<SiteConfig>({ ...siteConfig });
@@ -90,10 +110,6 @@ export const AdminStudioView: React.FC<AdminStudioViewProps> = ({
     status: 'published',
     isFeatured: false,
   });
-
-  // Selected Inquiry State
-  const [selectedInquiry, setSelectedInquiry] = useState<InquiryMessage | null>(null);
-  const [orderStatusFilter, setOrderStatusFilter] = useState<string>('all');
 
   const triggerSaveToast = (msg: string) => {
     setSaveSuccessMsg(msg);
@@ -1044,7 +1060,7 @@ export const AdminStudioView: React.FC<AdminStudioViewProps> = ({
               {inquiries.map((inq) => (
                 <div
                   key={inq.id}
-                  onClick={() => setSelectedInquiry(inq)}
+                  onClick={() => setSelectedInquiryId(inq.id)}
                   className={`p-4 rounded-2xl border cursor-pointer transition-all ${
                     selectedInquiry?.id === inq.id
                       ? 'bg-white border-[#C29B47] shadow-md'
@@ -1052,7 +1068,16 @@ export const AdminStudioView: React.FC<AdminStudioViewProps> = ({
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <h4 className="font-bold text-sm text-[#1D1E20]">{inq.senderName}</h4>
+                    <div className="flex items-center gap-2">
+                      {inq.avatarUrl ? (
+                        <img src={inq.avatarUrl} alt={inq.senderName} className="w-6 h-6 rounded-full object-cover border border-[#C29B47]" />
+                      ) : (
+                        <div className="w-6 h-6 rounded-full bg-[#C29B47]/20 text-[#C29B47] flex items-center justify-center text-[10px] font-bold">
+                          {inq.senderName.charAt(0)}
+                        </div>
+                      )}
+                      <h4 className="font-bold text-sm text-[#1D1E20]">{inq.senderName}</h4>
+                    </div>
                     <div className="flex items-center gap-1">
                       <span className="text-[10px] text-[#8C887B]">{inq.timeAgo}</span>
                       <button
@@ -1060,7 +1085,7 @@ export const AdminStudioView: React.FC<AdminStudioViewProps> = ({
                         onClick={(e) => {
                           e.stopPropagation();
                           onDeleteInquiry(inq.id);
-                          if (selectedInquiry?.id === inq.id) setSelectedInquiry(null);
+                          if (selectedInquiry?.id === inq.id) setSelectedInquiryId(null);
                           triggerSaveToast('বার্তাটি মুছে ফেলা হয়েছে!');
                         }}
                         className="p-1 text-rose-500 hover:bg-rose-100 rounded transition-colors"
@@ -1082,12 +1107,12 @@ export const AdminStudioView: React.FC<AdminStudioViewProps> = ({
                   <div className="border-b border-[#E6E2D8] pb-3 flex justify-between items-start">
                     <div>
                       <h3 className="font-bold text-lg text-[#1D1E20]">{selectedInquiry.subject}</h3>
-                      <p className="text-xs text-[#8C887B]">প্রেরক: {selectedInquiry.senderName} ({selectedInquiry.senderEmail})</p>
+                      <p className="text-xs text-[#8C887B]">প্রেরক: {selectedInquiry.senderName} ({selectedInquiry.senderEmail || 'ইমেইল জানা নেই'})</p>
                     </div>
                     <button
                       onClick={() => {
                         onDeleteInquiry(selectedInquiry.id);
-                        setSelectedInquiry(null);
+                        setSelectedInquiryId(null);
                         triggerSaveToast('বার্তা মুছে ফেলা হয়েছে');
                       }}
                       className="p-1.5 text-rose-600 hover:bg-rose-100 rounded-lg"
@@ -1096,16 +1121,283 @@ export const AdminStudioView: React.FC<AdminStudioViewProps> = ({
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
-                  <p className="text-xs text-[#3A3834] leading-relaxed whitespace-pre-line bg-white p-4 rounded-xl border border-[#E6E2D8]">
-                    {selectedInquiry.message}
-                  </p>
-                  <div className="pt-2 flex flex-wrap items-center gap-2">
+
+                  {/* Thread Messenger Container */}
+                  <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1 p-2 bg-[#F2EFE9]/50 rounded-2xl border border-[#E6E2D8]">
+                    {/* Primary User Message (Left Aligned for Admin) */}
+                    <div className="flex flex-col items-start gap-1 max-w-[85%] group">
+                      <div className="flex items-center gap-1.5 text-[10px] text-[#8C887B] font-bold px-1">
+                        {selectedInquiry.avatarUrl ? (
+                          <img src={selectedInquiry.avatarUrl} alt={selectedInquiry.senderName} className="w-4 h-4 rounded-full object-cover" />
+                        ) : (
+                          <span className="w-4 h-4 rounded-full bg-[#C29B47] text-white flex items-center justify-center text-[8px] font-bold">
+                            {selectedInquiry.senderName.charAt(0)}
+                          </span>
+                        )}
+                        <span>{selectedInquiry.senderName}</span>
+                        <span>•</span>
+                        <span>{selectedInquiry.date}</span>
+                      </div>
+
+                      <div className="bg-white border border-[#E2DDD3] text-[#1D1E20] p-3.5 rounded-2xl rounded-tl-sm text-xs leading-relaxed space-y-2 shadow-xs w-full">
+                        {editingMsgKey === `main-${selectedInquiry.id}` ? (
+                          <div className="space-y-2">
+                            <textarea
+                              rows={3}
+                              value={editingText}
+                              onChange={(e) => setEditingText(e.target.value)}
+                              className="w-full p-2 bg-[#F9F8F5] border border-[#C29B47] rounded-lg text-xs focus:outline-none text-[#1D1E20]"
+                            />
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setEditingMsgKey(null)}
+                                className="px-2.5 py-1 text-[11px] font-bold text-[#8C887B] hover:bg-gray-100 rounded-lg"
+                              >
+                                বাতিল
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (onEditInquiryMessage && editingText.trim()) {
+                                    onEditInquiryMessage(selectedInquiry.id, editingText);
+                                    triggerSaveToast('বার্তা আপডেট করা হয়েছে');
+                                  }
+                                  setEditingMsgKey(null);
+                                }}
+                                className="px-3 py-1 text-[11px] font-bold bg-[#C29B47] text-white rounded-lg hover:bg-[#A88234]"
+                              >
+                                সংরক্ষণ
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <p className="whitespace-pre-line font-medium">{selectedInquiry.message}</p>
+                            {selectedInquiry.editedAt && (
+                              <span className="text-[9px] text-[#8C887B] italic block">(সম্পাদিত)</span>
+                            )}
+                          </>
+                        )}
+
+                        {selectedInquiry.imageUrl && (
+                          <img 
+                            src={selectedInquiry.imageUrl} 
+                            alt="সংযুক্ত ছবি" 
+                            onClick={() => setEnlargedImage(selectedInquiry.imageUrl || null)}
+                            className="max-h-48 rounded-xl object-cover border border-[#E6E2D8] cursor-pointer hover:opacity-90 transition-opacity"
+                          />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Threaded Replies */}
+                    {selectedInquiry.replies && selectedInquiry.replies.length > 0 && selectedInquiry.replies.map((rep) => {
+                      const isAdminReply = rep.sender === 'admin';
+                      return (
+                        <div 
+                          key={rep.id} 
+                          className={`flex flex-col gap-1 max-w-[85%] group ${isAdminReply ? 'ml-auto items-end' : 'mr-auto items-start'}`}
+                        >
+                          <div className={`flex items-center gap-1.5 text-[10px] font-bold px-1 ${isAdminReply ? 'text-[#C29B47]' : 'text-[#8C887B]'}`}>
+                            {!isAdminReply && (
+                              rep.avatarUrl ? (
+                                <img src={rep.avatarUrl} alt={rep.senderName} className="w-3.5 h-3.5 rounded-full object-cover" />
+                              ) : (
+                                <span className="w-3.5 h-3.5 rounded-full bg-[#C29B47] text-white flex items-center justify-center text-[7px] font-bold">
+                                  {rep.senderName?.charAt(0) || 'U'}
+                                </span>
+                              )
+                            )}
+                            <span>{rep.responderName || rep.senderName || (isAdminReply ? 'এডমিন' : 'পাঠক')}</span>
+                            <span>•</span>
+                            <span className="font-normal">{rep.date}</span>
+                            
+                            {isAdminReply && onEditInquiryReply && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingMsgKey(rep.id);
+                                  setEditingText(rep.message);
+                                }}
+                                className="opacity-0 group-hover:opacity-100 p-0.5 text-[#C29B47] hover:text-[#A88234] transition-opacity cursor-pointer"
+                                title="সম্পাদনা করুন"
+                              >
+                                <Edit3 className="w-3 h-3" />
+                              </button>
+                            )}
+
+                            {onDeleteInquiryReply && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  onDeleteInquiryReply(selectedInquiry.id, rep.id);
+                                  triggerSaveToast('বার্তাটি মুছে ফেলা হয়েছে');
+                                }}
+                                className="opacity-0 group-hover:opacity-100 p-0.5 text-rose-500 hover:text-rose-700 transition-opacity cursor-pointer"
+                                title="এই বার্তাটি মুছুন"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
+
+                          <div 
+                            className={`p-3.5 rounded-2xl text-xs leading-relaxed space-y-2 shadow-xs w-full ${
+                              isAdminReply 
+                                ? 'bg-[#FFF7E6] border border-[#C29B47]/30 text-[#1D1E20] rounded-tr-sm' 
+                                : 'bg-white border border-[#E2DDD3] text-[#1D1E20] rounded-tl-sm'
+                            }`}
+                          >
+                            {editingMsgKey === rep.id ? (
+                              <div className="space-y-2">
+                                <textarea
+                                  rows={3}
+                                  value={editingText}
+                                  onChange={(e) => setEditingText(e.target.value)}
+                                  className="w-full p-2 bg-[#F9F8F5] border border-[#C29B47] rounded-lg text-xs focus:outline-none text-[#1D1E20]"
+                                />
+                                <div className="flex items-center justify-end gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingMsgKey(null)}
+                                    className="px-2.5 py-1 text-[11px] font-bold text-[#8C887B] hover:bg-gray-100 rounded-lg"
+                                  >
+                                    বাতিল
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (onEditInquiryReply && editingText.trim()) {
+                                        onEditInquiryReply(selectedInquiry.id, rep.id, editingText);
+                                        triggerSaveToast('বার্তা আপডেট করা হয়েছে');
+                                      }
+                                      setEditingMsgKey(null);
+                                    }}
+                                    className="px-3 py-1 text-[11px] font-bold bg-[#C29B47] text-white rounded-lg hover:bg-[#A88234]"
+                                  >
+                                    সংরক্ষণ
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                <p className="whitespace-pre-line font-medium">{rep.message}</p>
+                                {rep.editedAt && (
+                                  <span className="text-[9px] text-[#8C887B] italic block">(সম্পাদিত)</span>
+                                )}
+                              </>
+                            )}
+
+                            {rep.imageUrl && (
+                              <img 
+                                src={rep.imageUrl} 
+                                alt="সংযুক্ত ছবি" 
+                                onClick={() => setEnlargedImage(rep.imageUrl || null)}
+                                className="max-h-40 rounded-lg object-cover border border-[#C29B47]/30 cursor-pointer hover:opacity-90 transition-opacity"
+                              />
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* In-App Reply Form for User Dashboard Visibility */}
+                  <div className="bg-white p-4 border border-[#E6E2D8] rounded-2xl space-y-3 mt-3">
+                    <h4 className="text-xs font-bold text-[#1D1E20] flex items-center gap-1.5">
+                      <Send className="w-3.5 h-3.5 text-[#C29B47]" />
+                      <span>ওয়েবসাইটে সরাসরি উত্তর পাঠান (ইউজার ড্যাশবোর্ডে দেখতে পাবেন)</span>
+                    </h4>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-[#8C887B] block">উত্তরদাতার নাম (পরিচয়):</label>
+                      <input
+                        type="text"
+                        value={adminResponderName}
+                        onChange={(e) => setAdminResponderName(e.target.value)}
+                        placeholder="যেমন: রাইয়ান প্রকাশন / আশেক মেহমুদ"
+                        className="w-full px-3 py-1.5 bg-[#F9F8F5] border border-[#D9D3C7] rounded-lg text-xs text-[#1D1E20] font-bold focus:outline-none focus:border-[#C29B47]"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-[#8C887B] block">আপনার উত্তর / বার্তা:</label>
+                      <textarea
+                        rows={3}
+                        value={adminReplyText}
+                        onChange={(e) => setAdminReplyText(e.target.value)}
+                        placeholder="গ্রাহকের জন্য বার্তা লিখুন..."
+                        className="w-full p-2.5 bg-[#F9F8F5] border border-[#D9D3C7] rounded-xl text-xs text-[#1D1E20] focus:outline-none focus:border-[#C29B47]"
+                      />
+                    </div>
+
+                    {/* Image Attachment Input for Reply */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <label className="px-3 py-1.5 bg-[#F9F8F5] hover:bg-[#EFECE6] border border-[#D9D3C7] rounded-lg text-xs font-bold text-[#5C584E] flex items-center gap-1.5 cursor-pointer transition-colors">
+                          <Upload className="w-3.5 h-3.5 text-[#C29B47]" />
+                          <span>ছবি যুক্ত করুন</span>
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            className="hidden" 
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onload = (ev) => {
+                                  if (ev.target?.result) {
+                                    setAdminReplyImage(ev.target.result as string);
+                                  }
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }} 
+                          />
+                        </label>
+                        {adminReplyImage && (
+                          <div className="relative inline-block">
+                            <img src={adminReplyImage} alt="Preview" className="w-10 h-10 object-cover rounded-lg border border-[#C29B47]" />
+                            <button
+                              type="button"
+                              onClick={() => setAdminReplyImage(null)}
+                              className="absolute -top-1 -right-1 bg-rose-600 text-white rounded-full p-0.5 hover:bg-rose-700"
+                            >
+                              <X className="w-2.5 h-2.5" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!adminReplyText.trim() && !adminReplyImage) return;
+                          if (onReplyInquiry) {
+                            onReplyInquiry(selectedInquiry.id, adminReplyText.trim(), adminResponderName.trim(), adminReplyImage || undefined);
+                            triggerSaveToast('উত্তরটি গ্রাহকের নিকট পাঠানো হয়েছে!');
+                            setAdminReplyText('');
+                            setAdminReplyImage(null);
+                          } else {
+                            triggerSaveToast('রিপ্লাই ফাংশন উপলব্ধ নয়');
+                          }
+                        }}
+                        className="px-4 py-2 bg-[#1D1E20] hover:bg-[#C29B47] text-white text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                        <span>উত্তর প্রদান করুন</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex flex-wrap items-center gap-2 border-t border-[#E6E2D8]">
                     <a
                       href={`mailto:${selectedInquiry.senderEmail}?subject=Re: ${encodeURIComponent(selectedInquiry.subject)}`}
-                      className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#C29B47] text-white text-xs font-bold rounded-xl shadow hover:bg-[#a88338] transition-colors"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-[#F9F8F5] border border-[#D9D3C7] text-[#1D1E20] text-xs font-bold rounded-xl hover:bg-[#EFECE6] transition-colors"
                     >
-                      <Mail className="w-4 h-4" />
-                      <span>আপনার ইমেইল থেকে উত্তর পাঠান</span>
+                      <Mail className="w-3.5 h-3.5 text-[#C29B47]" />
+                      <span>ইমেইল ক্লায়েন্ট থেকে উত্তর দিন</span>
                     </a>
                     <button
                       type="button"
@@ -1113,9 +1405,9 @@ export const AdminStudioView: React.FC<AdminStudioViewProps> = ({
                         navigator.clipboard.writeText(selectedInquiry.senderEmail);
                         triggerSaveToast('ইমেইল কপি করা হয়েছে!');
                       }}
-                      className="px-4 py-2.5 bg-white border border-[#D9D3C7] text-xs font-bold text-[#1D1E20] rounded-xl hover:bg-[#EFECE6] transition-colors"
+                      className="px-3 py-2 bg-white border border-[#D9D3C7] text-xs font-bold text-[#8C887B] hover:text-[#1D1E20] rounded-xl transition-colors"
                     >
-                      ইমেইল কপি করুন ({selectedInquiry.senderEmail})
+                      ইমেইল কপি করুন
                     </button>
                   </div>
                 </div>
@@ -1496,6 +1788,24 @@ export const AdminStudioView: React.FC<AdminStudioViewProps> = ({
               </button>
             </div>
           </form>
+          </div>
+        </div>
+      )}
+
+      {/* Image Lightbox Modal */}
+      {enlargedImage && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setEnlargedImage(null)}
+        >
+          <div className="relative max-w-3xl max-h-[90vh] overflow-hidden rounded-2xl bg-black p-2">
+            <button
+              onClick={() => setEnlargedImage(null)}
+              className="absolute top-4 right-4 bg-white/80 hover:bg-white text-black p-2 rounded-full z-10 transition-colors cursor-pointer shadow-lg"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <img src={enlargedImage} alt="Enlarged" className="max-w-full max-h-[85vh] object-contain rounded-xl mx-auto" />
           </div>
         </div>
       )}

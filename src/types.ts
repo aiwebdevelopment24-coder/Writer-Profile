@@ -108,6 +108,7 @@ export interface Review {
   date: string;
   comment: string;
   avatar?: string;
+  avatarUrl?: string;
   authorKey?: string;
 }
 
@@ -117,6 +118,7 @@ export interface BlogComment {
   userName: string;
   userEmailOrPhone?: string;
   userKey?: string;
+  avatarUrl?: string;
   date: string;
   comment: string;
 }
@@ -149,8 +151,13 @@ export interface InquiryReply {
   id: string;
   sender: 'user' | 'admin';
   senderName: string;
+  responderName?: string;
+  avatarUrl?: string;
   message: string;
+  imageUrl?: string;
   date: string;
+  createdAt?: string;
+  editedAt?: string;
 }
 
 export interface InquiryMessage {
@@ -159,14 +166,17 @@ export interface InquiryMessage {
   senderEmail?: string;
   senderPhone?: string;
   userKey?: string;
+  avatarUrl?: string;
   subject: string;
   message: string;
+  imageUrl?: string;
   date: string;
   timeAgo: string;
   isRead: boolean;
   isUrgent?: boolean;
   adminReply?: string;
   replies?: InquiryReply[];
+  editedAt?: string;
 }
 
 export interface UserProfile {
@@ -175,6 +185,7 @@ export interface UserProfile {
   emailOrPhone: string;
   password?: string;
   avatarUrl?: string;
+  address?: string;
   createdAt?: string;
 }
 

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Book, ViewMode } from '../types';
-import { Search, BookOpen, ShoppingCart, FileText } from 'lucide-react';
+import { Search, BookOpen, ShoppingCart, FileText, Heart } from 'lucide-react';
 import { PdfReaderModal } from '../components/PdfReaderModal';
 import { BookCoverImage } from '../components/BookCoverImage';
 
@@ -9,12 +9,16 @@ interface BooksViewProps {
   setCurrentView: (view: ViewMode) => void;
   onSelectBook: (book: Book) => void;
   onOpenOrderModal: (book?: Book) => void;
+  wishlistIds?: string[];
+  onToggleWishlist?: (bookId: string) => void;
 }
 
 export const BooksView: React.FC<BooksViewProps> = ({
   books,
   onSelectBook,
   onOpenOrderModal,
+  wishlistIds = [],
+  onToggleWishlist,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('সবগুলো');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -83,6 +87,7 @@ export const BooksView: React.FC<BooksViewProps> = ({
       {filteredBooks.length > 0 ? (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 min-h-[500px]">
           {filteredBooks.map((book) => {
+            const isWishlisted = wishlistIds.includes(book.id);
             return (
               <div
                 key={book.id}
@@ -99,9 +104,22 @@ export const BooksView: React.FC<BooksViewProps> = ({
                   )}
 
                   {book.originalPrice && book.originalPrice > book.price && (
-                    <span className="absolute top-4 right-4 bg-rose-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-md shadow z-10">
+                    <span className={`absolute ${book.isNewRelease ? 'top-11' : 'top-4'} left-4 bg-rose-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow z-10`}>
                       {Math.round(((book.originalPrice - book.price) / book.originalPrice) * 100)}% ছাড়
                     </span>
+                  )}
+
+                  {onToggleWishlist && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleWishlist(book.id);
+                      }}
+                      className="absolute top-4 right-4 p-2 bg-white/90 backdrop-blur-sm rounded-full shadow-md hover:scale-110 transition-transform z-10 cursor-pointer"
+                      title="উইশলিস্টে রাখুন"
+                    >
+                      <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-rose-500 text-rose-500' : 'text-[#8C887B]'}`} />
+                    </button>
                   )}
                   
                   {/* 3D Book Cover */}
@@ -154,9 +172,9 @@ export const BooksView: React.FC<BooksViewProps> = ({
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => onOpenOrderModal(book)}
-                        className="flex-1 py-3 min-h-[44px] bg-[#1D1E20] hover:bg-[#C29B47] text-white text-xs sm:text-sm font-bold rounded-xl shadow transition-colors flex items-center justify-center gap-2 active:scale-95"
+                        className="flex-1 py-3 min-h-[44px] bg-[#1D1E20] hover:bg-[#C29B47] text-white text-xs sm:text-sm font-bold rounded-xl shadow-md hover:shadow-xl transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2 active:scale-95 group/orderbtn cursor-pointer"
                       >
-                        <ShoppingCart className="w-4 h-4" />
+                        <ShoppingCart className="w-4 h-4 transition-transform group-hover/orderbtn:scale-110 group-hover/orderbtn:-rotate-12" />
                         <span>বই অর্ডার করুন</span>
                       </button>
 

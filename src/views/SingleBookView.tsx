@@ -91,6 +91,7 @@ export const SingleBookView: React.FC<SingleBookViewProps> = ({
       rating: newReviewRating,
       date: new Date().toLocaleDateString('bn-BD', { year: 'numeric', month: 'long', day: 'numeric' }),
       comment: newReviewComment,
+      avatarUrl: currentUser?.avatarUrl,
       authorKey: currentUser.id || currentUser.emailOrPhone,
     };
 
@@ -250,9 +251,9 @@ export const SingleBookView: React.FC<SingleBookViewProps> = ({
             <div className="flex flex-wrap items-center gap-3 pt-2">
               <button
                 onClick={() => onOpenOrderModal(book)}
-                className="flex-1 sm:flex-none px-7 py-3.5 bg-[#1D1E20] hover:bg-[#C29B47] text-white text-xs font-bold rounded-xl shadow transition-colors flex items-center justify-center gap-2"
+                className="flex-1 sm:flex-none px-7 py-3.5 bg-[#1D1E20] hover:bg-[#C29B47] text-white text-xs font-bold rounded-xl shadow-md hover:shadow-xl transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2 active:scale-95 group/orderbtn cursor-pointer"
               >
-                <ShoppingBag className="w-4 h-4" />
+                <ShoppingBag className="w-4 h-4 transition-transform group-hover/orderbtn:scale-110 group-hover/orderbtn:-rotate-12" />
                 <span>বই অর্ডার করুন</span>
               </button>
 
@@ -510,8 +511,12 @@ export const SingleBookView: React.FC<SingleBookViewProps> = ({
                 )}
 
                 <div className="flex items-center gap-2 pt-1">
-                  <div className="w-7 h-7 rounded-full bg-[#1D1E20] text-white font-bold text-xs flex items-center justify-center">
-                    {rev.reviewerName.charAt(0)}
+                  <div className="w-7 h-7 rounded-full bg-[#1D1E20] text-white font-bold text-xs flex items-center justify-center overflow-hidden shrink-0 border border-[#C29B47]">
+                    {rev.avatarUrl || (isOwner && currentUser?.avatarUrl) ? (
+                      <img src={rev.avatarUrl || currentUser?.avatarUrl} alt={rev.reviewerName} className="w-full h-full object-cover" />
+                    ) : (
+                      rev.reviewerName.charAt(0)
+                    )}
                   </div>
                   <div>
                     <h4 className="font-bold text-xs text-[#1D1E20]">

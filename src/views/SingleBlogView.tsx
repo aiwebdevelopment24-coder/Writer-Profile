@@ -37,24 +37,25 @@ export const SingleBlogView: React.FC<SingleBlogViewProps> = ({
   const handleSubmitComment = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!currentUser && !guestName.trim()) {
+    if (!currentUser) {
       if (onTriggerAuthRequired) {
-        onTriggerAuthRequired('ব্লগে মন্তব্য করতে লগইন করুন বা নাম প্রদান করুন।');
+        onTriggerAuthRequired('মন্তব্য করতে অনুগ্রহ করে প্রথমে লগইন করুন।');
       }
       return;
     }
 
     if (!newCommentText.trim()) return;
 
-    const authorName = currentUser ? currentUser.name : guestName.trim();
-    const userKey = currentUser ? (currentUser.id || currentUser.emailOrPhone) : undefined;
+    const authorName = currentUser.name;
+    const userKey = currentUser.id || currentUser.emailOrPhone;
 
     const newComment: BlogComment = {
       id: 'cmt_' + Date.now(),
       blogId: blog.id,
       userName: authorName,
-      userEmailOrPhone: currentUser ? currentUser.emailOrPhone : undefined,
+      userEmailOrPhone: currentUser.emailOrPhone,
       userKey: userKey,
+      avatarUrl: currentUser.avatarUrl,
       date: new Date().toLocaleDateString('bn-BD', { year: 'numeric', month: 'long', day: 'numeric' }),
       comment: newCommentText.trim(),
     };
@@ -141,40 +142,40 @@ export const SingleBlogView: React.FC<SingleBlogViewProps> = ({
         </div>
 
         {/* Comment Form */}
-        <form onSubmit={handleSubmitComment} className="bg-[#EFECE6] border border-[#E2DDD3] rounded-2xl p-5 space-y-4 shadow-sm">
-          {!currentUser && (
+        {!currentUser ? (
+          <div className="bg-[#EFECE6] border border-[#E2DDD3] rounded-2xl p-6 text-center space-y-3 shadow-sm">
+            <p className="text-xs font-bold text-[#1D1E20]">মন্তব্য করতে অনুগ্রহ করে আপনার একাউন্টে লগইন করুন</p>
+            <button
+              type="button"
+              onClick={() => onTriggerAuthRequired('মন্তব্য করতে অনুগ্রহ করে প্রথমে লগইন করুন।')}
+              className="px-6 py-2.5 bg-[#C29B47] hover:bg-[#a88338] text-white text-xs font-bold rounded-xl shadow transition-colors cursor-pointer"
+            >
+              লগইন করুন / একাউন্ট খুলুন
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmitComment} className="bg-[#EFECE6] border border-[#E2DDD3] rounded-2xl p-5 space-y-4 shadow-sm">
             <div>
-              <label className="block text-xs font-bold text-[#3A3834] mb-1">আপনার নাম *</label>
-              <input
-                type="text"
-                placeholder="যেমন: তানভীর আহমেদ"
-                value={guestName}
-                onChange={(e) => setGuestName(e.target.value)}
-                className="w-full px-4 py-2.5 bg-white border border-[#D9D3C7] rounded-xl text-xs text-[#1D1E20] focus:outline-none focus:border-[#C29B47]"
+              <label className="block text-xs font-bold text-[#3A3834] mb-1">আপনার মন্তব্য লিখুন * ({currentUser.name})</label>
+              <textarea
+                rows={3}
+                required
+                placeholder="এই লেখাসম্পর্কে আপনার মূল্যবান মতামত লিখুন..."
+                value={newCommentText}
+                onChange={(e) => setNewCommentText(e.target.value)}
+                className="w-full px-4 py-3 bg-white border border-[#D9D3C7] rounded-xl text-xs text-[#1D1E20] focus:outline-none focus:border-[#C29B47]"
               />
             </div>
-          )}
 
-          <div>
-            <label className="block text-xs font-bold text-[#3A3834] mb-1">আপনার মন্তব্য লিখুন *</label>
-            <textarea
-              rows={3}
-              required
-              placeholder="এই লেখাসম্পর্কে আপনার মূল্যবান মতামত লিখুন..."
-              value={newCommentText}
-              onChange={(e) => setNewCommentText(e.target.value)}
-              className="w-full px-4 py-3 bg-white border border-[#D9D3C7] rounded-xl text-xs text-[#1D1E20] focus:outline-none focus:border-[#C29B47]"
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="px-5 py-2.5 bg-[#C29B47] hover:bg-[#a88338] text-white text-xs font-bold rounded-xl shadow transition-colors flex items-center gap-2 cursor-pointer"
-          >
-            <Send className="w-4 h-4" />
-            <span>মন্তব্য প্রকাশ করুন</span>
-          </button>
-        </form>
+            <button
+              type="submit"
+              className="px-5 py-2.5 bg-[#C29B47] hover:bg-[#a88338] text-white text-xs font-bold rounded-xl shadow transition-colors flex items-center gap-2 cursor-pointer"
+            >
+              <Send className="w-4 h-4" />
+              <span>মন্তব্য প্রকাশ করুন</span>
+            </button>
+          </form>
+        )}
 
         {/* Comments List */}
         {blogComments.length > 0 ? (
@@ -192,8 +193,12 @@ export const SingleBlogView: React.FC<SingleBlogViewProps> = ({
                 <div key={comment.id} className="bg-white border border-[#E6E2D8] rounded-2xl p-5 shadow-sm space-y-3">
                   <div className="flex items-center justify-between border-b border-[#F2EFE9] pb-2">
                     <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-[#C29B47] text-white font-bold font-serif-bn text-xs flex items-center justify-center">
-                        {comment.userName.charAt(0).toUpperCase()}
+                      <div className="w-7 h-7 rounded-full bg-[#C29B47] text-white font-bold font-serif-bn text-xs flex items-center justify-center overflow-hidden shrink-0 border border-[#C29B47]">
+                        {comment.avatarUrl || (isOwner && currentUser?.avatarUrl) ? (
+                          <img src={comment.avatarUrl || currentUser?.avatarUrl} alt={comment.userName} className="w-full h-full object-cover" />
+                        ) : (
+                          comment.userName.charAt(0).toUpperCase()
+                        )}
                       </div>
                       <div>
                         <span className="font-bold text-xs text-[#1D1E20] block">{comment.userName}</span>

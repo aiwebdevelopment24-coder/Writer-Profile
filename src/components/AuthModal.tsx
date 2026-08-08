@@ -87,11 +87,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         resetForms();
       }, 800);
     } else {
-      // If user doesn't exist, create a instant quick account for convenience
+      // If user doesn't exist, create an instant quick account for convenience
+      const cleanVal = loginEmailOrPhone.trim();
+      const isDigitsOrPhone = /^[0-9+]+$/.test(cleanVal);
+      let defaultDerivedName = 'শ্রদ্ধেয় পাঠক';
+      if (!isDigitsOrPhone && cleanVal.includes('@')) {
+        const rawName = cleanVal.split('@')[0];
+        if (rawName && !/^[0-9+]+$/.test(rawName)) {
+          defaultDerivedName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+        }
+      }
+
       const newUser: UserProfile = {
         id: `user-${Date.now()}`,
-        name: loginEmailOrPhone.split('@')[0] || 'শ্রদ্ধেয় পাঠক',
-        emailOrPhone: loginEmailOrPhone.trim(),
+        name: defaultDerivedName,
+        emailOrPhone: cleanVal,
         password: loginPassword,
         createdAt: new Date().toISOString()
       };

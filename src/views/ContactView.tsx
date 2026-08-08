@@ -180,7 +180,7 @@ export const ContactView: React.FC<ContactViewProps> = ({
               className="px-6 py-3.5 bg-[#C29B47] hover:bg-[#a88338] text-white text-xs font-bold rounded-xl shadow transition-all flex items-center gap-2 hover:-translate-y-0.5 cursor-pointer"
             >
               <Send className="w-4 h-4" />
-              <span>মেসেজ পাঠান</span>
+              <span>আপনার বার্তা পৌঁছে দিন লেখকের কাছে</span>
             </button>
           </form>
         )}

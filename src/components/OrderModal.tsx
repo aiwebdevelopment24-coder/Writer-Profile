@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ShoppingBag, CheckCircle2, Truck, Phone, MapPin, User, BookOpen, Plus, Trash2 } from 'lucide-react';
+import { X, ShoppingBag, CheckCircle2, Truck, Phone, MapPin, User, BookOpen, Plus, Trash2, Zap } from 'lucide-react';
 import { Book, Order, SiteConfig, UserProfile } from '../types';
 
 interface OrderModalProps {
@@ -11,6 +11,7 @@ interface OrderModalProps {
   onPlaceOrder: (order: Omit<Order, 'id' | 'orderDate' | 'status'>) => void;
   currentUser: UserProfile | null;
   onTriggerAuthRequired: (msg?: string) => void;
+  onUpdateCurrentUser?: (updatedUser: UserProfile) => void;
 }
 
 interface CartItem {
@@ -28,6 +29,7 @@ export const OrderModal: React.FC<OrderModalProps> = ({
   onPlaceOrder,
   currentUser,
   onTriggerAuthRequired,
+  onUpdateCurrentUser,
 }) => {
   const publishedBooks = books.filter(b => b.status === 'published' || !b.status);
   const availableBooks = publishedBooks.length > 0 ? publishedBooks : books;
@@ -40,8 +42,24 @@ export const OrderModal: React.FC<OrderModalProps> = ({
   const [customerName, setCustomerName] = useState<string>('');
   const [customerPhone, setCustomerPhone] = useState<string>('');
   const [customerAddress, setCustomerAddress] = useState<string>('');
+  const [saveAddressToProfile, setSaveAddressToProfile] = useState<boolean>(true);
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const [orderRef, setOrderRef] = useState<string>('');
+
+  // Fast Checkout Auto-fill function
+  const applyFastCheckout = () => {
+    if (currentUser) {
+      if (currentUser.name && !/^[0-9+]+$/.test(currentUser.name.trim())) {
+        setCustomerName(currentUser.name);
+      } else {
+        setCustomerName('শ্রদ্ধেয় পাঠক');
+      }
+      setCustomerPhone(currentUser.emailOrPhone || '');
+      if (currentUser.address) {
+        setCustomerAddress(currentUser.address);
+      }
+    }
+  };
 
   // Synchronize cart & prefill user details when selectedBook changes or modal opens
   useEffect(() => {
@@ -50,8 +68,7 @@ export const OrderModal: React.FC<OrderModalProps> = ({
         setCartItems([{ id: `item-${Date.now()}`, bookId: defaultBook.id, quantity: 1 }]);
       }
       if (currentUser) {
-        if (!customerName) setCustomerName(currentUser.name);
-        if (!customerPhone) setCustomerPhone(currentUser.emailOrPhone);
+        applyFastCheckout();
       }
     }
   }, [isOpen, selectedBook, currentUser]);
@@ -130,6 +147,15 @@ export const OrderModal: React.FC<OrderModalProps> = ({
     }
 
     if (!customerName || !customerPhone || !customerAddress) return;
+
+    if (saveAddressToProfile && currentUser && onUpdateCurrentUser) {
+      const validName = (currentUser.name && !/^[0-9+]+$/.test(currentUser.name.trim())) ? currentUser.name : customerName;
+      onUpdateCurrentUser({
+        ...currentUser,
+        address: customerAddress,
+        name: validName,
+      });
+    }
 
     // Format books summary title for administration & notifications
     const summaryTitleParts = cartDetails.map(item => `${item.bookObj?.title || 'বই'} (${item.quantity}টি)`);
@@ -252,6 +278,28 @@ export const OrderModal: React.FC<OrderModalProps> = ({
               
               {/* Scrollable Body */}
               <div className="flex-1 overflow-y-auto space-y-4 pr-1 sm:pr-2">
+                
+                {/* Fast Checkout Option Banner */}
+                {currentUser && (
+                  <div className="bg-[#FFF7E6] border border-[#C29B47]/40 p-3 rounded-2xl flex items-center justify-between gap-3 text-xs">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-[#C29B47] text-white flex items-center justify-center shrink-0 shadow-sm">
+                        <Zap className="w-4 h-4 fill-current" />
+                      </div>
+                      <div>
+                        <span className="font-bold text-[#1D1E20] block text-[11px]">ফাস্ট চেকআউট সক্রিয় (Fast Checkout)</span>
+                        <span className="text-[10px] text-[#8C887B]">আপনার একাউন্টের নাম, মোবাইল ও সংরক্ষিত ঠিকানা থেকে অটো-ফিল করা হয়েছে।</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={applyFastCheckout}
+                      className="px-2.5 py-1.5 bg-[#1D1E20] hover:bg-[#C29B47] text-white text-[10px] font-bold rounded-lg shrink-0 transition-colors cursor-pointer"
+                    >
+                      অটো-ফিল
+                    </button>
+                  </div>
+                )}
                 
                 {/* Book Selection List (Multiple Books supported) */}
                 <div className="space-y-2.5">
@@ -446,6 +494,17 @@ export const OrderModal: React.FC<OrderModalProps> = ({
                     />
                     <MapPin className="w-4 h-4 text-[#8C887B] absolute left-3.5 top-3" />
                   </div>
+                  {currentUser && (
+                    <label className="flex items-center gap-2 text-[11px] text-[#5C584E] font-medium pt-1 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={saveAddressToProfile}
+                        onChange={(e) => setSaveAddressToProfile(e.target.checked)}
+                        className="rounded border-[#D9D3C7] text-[#C29B47] focus:ring-[#C29B47]"
+                      />
+                      <span>এই ঠিকানাটি পরবর্তী ফাস্ট চেকআউটের জন্য প্রোফাইলে সংরক্ষণ করুন</span>
+                    </label>
+                  )}
                 </div>
 
                 {/* Pricing Breakdown Box */}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ViewMode, Book, BlogPost, EventItem, InquiryMessage, Review, SiteConfig, Order, UserProfile, BlogComment } from './types';
+import { ViewMode, Book, BlogPost, EventItem, InquiryMessage, InquiryReply, Review, SiteConfig, Order, UserProfile, BlogComment } from './types';
 import { 
   INITIAL_BOOKS, 
   INITIAL_BLOGS, 
@@ -39,6 +39,8 @@ import {
   removeDeletedId, 
   mergeCollection 
 } from './lib/storageUtils';
+
+import { updateSEOMeta } from './utils/seoUtils';
 
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
@@ -256,11 +258,18 @@ export default function App() {
   useEffect(() => {
     if (siteConfig) {
       localStorage.setItem('as_site_config', JSON.stringify(siteConfig));
-      if (siteConfig.siteName) {
-        document.title = siteConfig.siteName;
-      }
     }
   }, [siteConfig]);
+
+  // Dynamic SEO Meta Title & Description Effect
+  useEffect(() => {
+    updateSEOMeta({
+      view: currentView,
+      selectedBook,
+      selectedBlog,
+      siteConfig
+    });
+  }, [currentView, selectedBook, selectedBlog, siteConfig]);
 
   useEffect(() => {
     localStorage.setItem('as_wishlist', JSON.stringify(wishlist));
@@ -320,9 +329,32 @@ export default function App() {
   };
 
   const toggleWishlist = (bookId: string) => {
+    if (!currentUser) {
+      triggerAuthRequired('উইশলিস্টে বইটি সংরক্ষণ করতে দয়া করে প্রথমে লগইন করুন।');
+      return;
+    }
     setWishlist(prev => 
       prev.includes(bookId) ? prev.filter(id => id !== bookId) : [...prev, bookId]
     );
+  };
+
+  const handleClearWishlist = () => {
+    setWishlist([]);
+  };
+
+  const handleUpdateCurrentUser = (updatedUser: UserProfile) => {
+    setCurrentUser(updatedUser);
+    localStorage.setItem('as_current_user', JSON.stringify(updatedUser));
+    try {
+      const saved = localStorage.getItem('as_registered_users');
+      if (saved) {
+        const users: UserProfile[] = JSON.parse(saved);
+        const newUsers = users.map(u => (u.id === updatedUser.id || u.emailOrPhone === updatedUser.emailOrPhone) ? updatedUser : u);
+        localStorage.setItem('as_registered_users', JSON.stringify(newUsers));
+      }
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   // Place Cash-on-Delivery Order (Persisted to Firebase & LocalState)
@@ -436,13 +468,15 @@ export default function App() {
     deleteInquiryFirestore(inquiryId);
   };
 
-  const handleAddInquiry = (newInquiry: { senderName: string; senderEmail?: string; subject: string; message: string; userKey?: string }) => {
+  const handleAddInquiry = (newInquiry: { senderName: string; senderEmail?: string; subject: string; message: string; userKey?: string; imageUrl?: string }) => {
     const item: InquiryMessage = {
       id: `inq-${Date.now()}`,
       senderName: newInquiry.senderName,
       senderEmail: newInquiry.senderEmail,
+      avatarUrl: currentUser?.avatarUrl,
       subject: newInquiry.subject,
       message: newInquiry.message,
+      imageUrl: newInquiry.imageUrl,
       userKey: newInquiry.userKey,
       date: new Date().toLocaleDateString('bn-BD'),
       timeAgo: 'মাত্র এখন',
@@ -453,22 +487,97 @@ export default function App() {
     addInquiryFirestore(item);
   };
 
-  const handleReplyInquiry = (inquiryId: string, replyMessage: string) => {
+  const handleReplyInquiry = (inquiryId: string, replyMessage: string, customResponderName?: string, imageUrl?: string) => {
     setInquiries(prev => {
       const updated = prev.map(inq => {
         if (inq.id === inquiryId) {
-          const newReply = {
+          const isUserReply = !customResponderName && !!currentUser;
+          const responderName = customResponderName 
+            || (currentUser?.name && !/^[0-9+]+$/.test(currentUser.name.trim()) ? currentUser.name : 'শ্রদ্ধেয় পাঠক')
+            || 'লেখক / টিমের উত্তর';
+
+          const newReply: InquiryReply = {
             id: `rep-${Date.now()}`,
-            sender: (currentUser ? 'user' : 'admin') as 'user' | 'admin',
-            senderName: currentUser ? currentUser.name : 'লেখক / টিমের উত্তর',
+            sender: isUserReply ? ('user' as const) : ('admin' as const),
+            senderName: responderName,
+            responderName: responderName,
+            avatarUrl: isUserReply ? currentUser?.avatarUrl : undefined,
             message: replyMessage,
-            date: new Date().toLocaleDateString('bn-BD') + ' ' + new Date().toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' })
+            imageUrl: imageUrl || undefined,
+            date: new Date().toLocaleDateString('bn-BD') + ' ' + new Date().toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' }),
+            createdAt: new Date().toISOString()
           };
           const existingReplies = inq.replies || [];
           const updatedItem = {
             ...inq,
             replies: [...existingReplies, newReply],
-            adminReply: currentUser ? inq.adminReply : replyMessage
+            adminReply: isUserReply ? inq.adminReply : (replyMessage || (imageUrl ? '[ছবি পাঠানো হয়েছে]' : ''))
+          };
+          addInquiryFirestore(updatedItem);
+          return updatedItem;
+        }
+        return inq;
+      });
+      localStorage.setItem('as_inquiries', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleEditInquiryMessage = (inquiryId: string, newTextMessage: string) => {
+    setInquiries(prev => {
+      const updated = prev.map(inq => {
+        if (inq.id === inquiryId) {
+          const updatedItem = {
+            ...inq,
+            message: newTextMessage,
+            editedAt: new Date().toISOString()
+          };
+          addInquiryFirestore(updatedItem);
+          return updatedItem;
+        }
+        return inq;
+      });
+      localStorage.setItem('as_inquiries', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleEditInquiryReply = (inquiryId: string, replyId: string, newTextMessage: string) => {
+    setInquiries(prev => {
+      const updated = prev.map(inq => {
+        if (inq.id === inquiryId) {
+          const updatedReplies = (inq.replies || []).map(rep => {
+            if (rep.id === replyId) {
+              return {
+                ...rep,
+                message: newTextMessage,
+                editedAt: new Date().toISOString()
+              };
+            }
+            return rep;
+          });
+          const updatedItem = {
+            ...inq,
+            replies: updatedReplies
+          };
+          addInquiryFirestore(updatedItem);
+          return updatedItem;
+        }
+        return inq;
+      });
+      localStorage.setItem('as_inquiries', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleDeleteInquiryReply = (inquiryId: string, replyId: string) => {
+    setInquiries(prev => {
+      const updated = prev.map(inq => {
+        if (inq.id === inquiryId) {
+          const updatedReplies = (inq.replies || []).filter(r => r.id !== replyId);
+          const updatedItem = {
+            ...inq,
+            replies: updatedReplies
           };
           addInquiryFirestore(updatedItem);
           return updatedItem;
@@ -559,6 +668,8 @@ export default function App() {
             onSelectBook={handleSelectBook}
             onSelectBlog={handleSelectBlog}
             onOpenOrderModal={handleOpenOrderModal}
+            wishlistIds={wishlist}
+            onToggleWishlist={toggleWishlist}
           />
         )}
 
@@ -581,6 +692,8 @@ export default function App() {
             }}
             onSelectBook={handleSelectBook}
             onOpenOrderModal={handleOpenOrderModal}
+            wishlistIds={wishlist}
+            onToggleWishlist={toggleWishlist}
           />
         )}
 
@@ -655,17 +768,33 @@ export default function App() {
         )}
 
         {currentView === 'wishlist' && (
-          <WishlistView
-            books={books}
-            wishlistIds={wishlist}
-            onToggleWishlist={toggleWishlist}
-            setCurrentView={(v) => {
-              setCurrentView(v);
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            onSelectBook={handleSelectBook}
-            onOpenOrderModal={handleOpenOrderModal}
-          />
+          currentUser ? (
+            <WishlistView
+              books={books}
+              wishlistIds={wishlist}
+              onToggleWishlist={toggleWishlist}
+              onClearWishlist={handleClearWishlist}
+              setCurrentView={(v) => {
+                setCurrentView(v);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              onSelectBook={handleSelectBook}
+              onOpenOrderModal={handleOpenOrderModal}
+            />
+          ) : (
+            <div className="max-w-md mx-auto my-16 p-8 bg-white border border-[#E6E2D8] rounded-2xl text-center space-y-4">
+              <p className="text-sm font-bold text-[#1D1E20]">উইশলিস্ট দেখতে হলে অনুগ্রহ করে লগইন করুন</p>
+              <button
+                onClick={() => {
+                  setAuthModalTab('login');
+                  setIsAuthModalOpen(true);
+                }}
+                className="px-6 py-2.5 bg-[#C29B47] text-white text-xs font-bold rounded-xl cursor-pointer"
+              >
+                লগইন করুন
+              </button>
+            </div>
+          )
         )}
 
         {currentView === 'dashboard' && currentUser && (
@@ -683,6 +812,10 @@ export default function App() {
             onUpdateComment={handleUpdateBlogComment}
             onDeleteComment={handleDeleteBlogComment}
             onReplyInquiry={handleReplyInquiry}
+            onDeleteInquiry={handleDeleteInquiry}
+            onDeleteInquiryReply={handleDeleteInquiryReply}
+            onEditInquiryMessage={handleEditInquiryMessage}
+            onEditInquiryReply={handleEditInquiryReply}
             onLogout={handleUserLogout}
             setCurrentView={(v) => {
               setCurrentView(v);
@@ -690,6 +823,7 @@ export default function App() {
             }}
             onSelectBook={handleSelectBook}
             onOpenOrderModal={handleOpenOrderModal}
+            onUpdateCurrentUser={handleUpdateCurrentUser}
           />
         )}
 
@@ -711,6 +845,10 @@ export default function App() {
             onUpdateOrderStatus={handleUpdateOrderStatus}
             onDeleteOrder={handleDeleteOrder}
             onDeleteInquiry={handleDeleteInquiry}
+            onReplyInquiry={handleReplyInquiry}
+            onDeleteInquiryReply={handleDeleteInquiryReply}
+            onEditInquiryMessage={handleEditInquiryMessage}
+            onEditInquiryReply={handleEditInquiryReply}
             onDeleteReview={handleDeleteReview}
           />
         )}
@@ -738,6 +876,7 @@ export default function App() {
         onPlaceOrder={handlePlaceOrder}
         currentUser={currentUser}
         onTriggerAuthRequired={triggerAuthRequired}
+        onUpdateCurrentUser={handleUpdateCurrentUser}
       />
 
       {/* Auth Required Popup */}
