@@ -178,9 +178,16 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
                   <div className="flex-1 min-w-0 flex flex-col justify-between py-1">
                     <div className="space-y-1 min-w-0">
-                      <span className="text-[10px] font-bold uppercase text-[#C29B47] block truncate">
-                        {book.category}
-                      </span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-bold uppercase text-[#C29B47] block truncate">
+                          {book.category}
+                        </span>
+                        {book.originalPrice && book.originalPrice > book.price && (
+                          <span className="bg-rose-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-xs shrink-0">
+                            {Math.round(((book.originalPrice - book.price) / book.originalPrice) * 100)}% ছাড়
+                          </span>
+                        )}
+                      </div>
                       <h4 
                         onClick={() => onSelectBook(book)}
                         className="font-serif-bn font-bold text-base sm:text-lg text-[#1D1E20] group-hover:text-[#C29B47] cursor-pointer transition-colors leading-snug truncate"
@@ -311,9 +318,16 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
                   <div className="p-5 sm:p-6 flex-1 min-w-0 flex flex-col justify-between space-y-4">
                     <div className="space-y-1.5 min-w-0">
-                      <span className="text-xs font-bold text-[#C29B47] uppercase tracking-wider block truncate">
-                        {book.category}
-                      </span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-bold text-[#C29B47] uppercase tracking-wider block truncate">
+                          {book.category}
+                        </span>
+                        {book.originalPrice && book.originalPrice > book.price && (
+                          <span className="bg-rose-600 text-white text-[10px] font-bold px-2.5 py-0.5 rounded shadow-xs shrink-0">
+                            {Math.round(((book.originalPrice - book.price) / book.originalPrice) * 100)}% ছাড়
+                          </span>
+                        )}
+                      </div>
                       <h3 
                         onClick={() => onSelectBook(book)}
                         className="font-serif-bn font-bold text-lg sm:text-xl text-[#1D1E20] group-hover:text-[#C29B47] cursor-pointer transition-colors leading-snug line-clamp-2 break-words"

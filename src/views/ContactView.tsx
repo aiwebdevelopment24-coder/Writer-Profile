@@ -9,6 +9,7 @@ interface ContactViewProps {
   onTriggerAuthRequired?: (msg?: string) => void;
   userInquiries?: InquiryMessage[];
   onReplyInquiry?: (inquiryId: string, replyMessage: string) => void;
+  setCurrentView?: (view: string) => void;
 }
 
 export const ContactView: React.FC<ContactViewProps> = ({ 
@@ -17,7 +18,8 @@ export const ContactView: React.FC<ContactViewProps> = ({
   currentUser,
   onTriggerAuthRequired,
   userInquiries = [],
-  onReplyInquiry
+  onReplyInquiry,
+  setCurrentView
 }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -116,14 +118,27 @@ export const ContactView: React.FC<ContactViewProps> = ({
       {/* Main Form Box */}
       <div className="bg-[#EFECE6] border border-[#E2DDD3] rounded-3xl p-6 sm:p-10 shadow-sm space-y-6">
         {submitted ? (
-          <div className="text-center py-12 space-y-3 bg-white p-8 rounded-2xl border border-[#D9D3C7] shadow-sm">
+          <div className="text-center py-12 space-y-4 bg-white p-8 rounded-2xl border border-[#D9D3C7] shadow-sm">
             <CheckCircle className="w-12 h-12 text-emerald-600 mx-auto animate-bounce" />
             <h3 className="font-serif-bn font-bold text-2xl text-[#1D1E20]">
               আপনার বার্তাটি ইনবক্সে পাঠানো হয়েছে!
             </h3>
-            <p className="text-xs text-[#5C584E] max-w-md mx-auto">
-              ধন্যবাদ <strong>{name}</strong>, আপনার বার্তাটি সফলভাবে লেখকের ইনবক্সে পৌঁছেছে। অতি শীঘ্রই উত্তর দেওয়া হবে।
+            <p className="text-xs text-[#5C584E] max-w-md mx-auto leading-relaxed">
+              ধন্যবাদ <strong>{name}</strong>, আপনার বার্তাটি সফলভাবে লেখকের ইনবক্সে পৌঁছেছে। আপনার বার্তা এবং এর উত্তর দেখতে ড্যাশবোর্ডে মেসেজেস ট্যাবে যান।
             </p>
+            {setCurrentView && (
+              <button
+                type="button"
+                onClick={() => {
+                  setCurrentView('dashboard');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className="mt-2 px-6 py-3 bg-[#1D1E20] hover:bg-[#C29B47] text-white text-xs font-bold rounded-xl shadow transition-colors inline-flex items-center gap-2 cursor-pointer"
+              >
+                <MessageSquare className="w-4 h-4 text-[#C29B47]" />
+                <span>ড্যাশবোর্ডে মেসেজ দেখুন</span>
+              </button>
+            )}
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -186,94 +201,30 @@ export const ContactView: React.FC<ContactViewProps> = ({
         )}
       </div>
 
-      {/* Previous Conversations Chat Threads (If Logged In & Has Messages) */}
-      {currentUser && myInquiries.length > 0 && (
-        <div className="space-y-6 pt-4 border-t border-[#E6E2D8]">
-          <h3 className="font-serif-bn font-bold text-2xl text-[#1D1E20] flex items-center gap-2">
-            <MessageSquare className="w-6 h-6 text-[#C29B47]" />
-            <span>পূর্বে পাঠানো কথোপকথন তালিকা</span>
-          </h3>
-
-          <div className="space-y-6">
-            {myInquiries.map((inquiry) => (
-              <div 
-                key={inquiry.id}
-                className="bg-white border border-[#E6E2D8] rounded-2xl p-6 shadow-sm space-y-4"
-              >
-                <div className="flex items-center justify-between border-b border-[#F2EFE9] pb-3">
-                  <div>
-                    <span className="text-[11px] uppercase tracking-wider font-bold text-[#C29B47] block">
-                      বিষয়: {inquiry.subject}
-                    </span>
-                    <p className="text-xs text-[#8C887B]">{inquiry.date}</p>
-                  </div>
-                  <span className="px-2.5 py-1 bg-[#FFF7E6] text-[#C29B47] border border-[#F2EFE9] text-[11px] font-bold rounded-full">
-                    {inquiry.replies?.length ? `${inquiry.replies.length} টি বার্তা` : inquiry.adminReply ? 'উত্তর দেওয়া হয়েছে' : 'প্রক্রিয়াধীন'}
-                  </span>
-                </div>
-
-                {/* Initial User Message */}
-                <div className="bg-[#F9F8F5] p-4 rounded-xl border border-[#E2DDD3] space-y-1">
-                  <p className="text-xs font-bold text-[#1D1E20]">{inquiry.senderName}:</p>
-                  <p className="text-xs text-[#3A3834] leading-relaxed whitespace-pre-line">{inquiry.message}</p>
-                </div>
-
-                {/* Legacy Admin Reply */}
-                {inquiry.adminReply && (!inquiry.replies || inquiry.replies.length === 0) && (
-                  <div className="bg-[#FFF7E6] p-4 rounded-xl border border-[#C29B47]/30 space-y-1 ml-4 sm:ml-8">
-                    <p className="text-xs font-bold text-[#C29B47]">লেখক / এডমিন রেসপন্স:</p>
-                    <p className="text-xs text-[#1D1E20] leading-relaxed whitespace-pre-line">{inquiry.adminReply}</p>
-                  </div>
-                )}
-
-                {/* Threaded Chat Messages */}
-                {inquiry.replies && inquiry.replies.length > 0 && (
-                  <div className="space-y-3 pt-2">
-                    {inquiry.replies.map((reply) => (
-                      <div
-                        key={reply.id}
-                        className={`p-3.5 rounded-xl border text-xs leading-relaxed space-y-1 ${
-                          reply.sender === 'admin'
-                            ? 'bg-[#FFF7E6] border-[#C29B47]/30 text-[#1D1E20] ml-4 sm:ml-8'
-                            : 'bg-[#F9F8F5] border-[#D9D3C7] text-[#3A3834] mr-4 sm:mr-8'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between font-bold text-[11px]">
-                          <span className={reply.sender === 'admin' ? 'text-[#C29B47]' : 'text-[#1D1E20]'}>
-                            {reply.senderName}
-                          </span>
-                          <span className="text-[10px] text-[#8C887B] font-normal">{reply.date}</span>
-                        </div>
-                        <p className="whitespace-pre-line">{reply.message}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Follow-up reply box */}
-                <div className="pt-2 flex items-center gap-2">
-                  <input
-                    type="text"
-                    placeholder="এই বিষয়ে আরও কিছু বলুন..."
-                    value={replyInputs[inquiry.id] || ''}
-                    onChange={(e) => setReplyInputs(prev => ({ ...prev, [inquiry.id]: e.target.value }))}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleSendFollowupReply(inquiry.id);
-                    }}
-                    className="flex-1 px-4 py-2.5 bg-[#F9F8F5] border border-[#D9D3C7] rounded-xl text-xs text-[#1D1E20] focus:outline-none focus:border-[#C29B47]"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleSendFollowupReply(inquiry.id)}
-                    className="px-4 py-2.5 bg-[#1D1E20] hover:bg-[#C29B47] text-white text-xs font-bold rounded-xl transition-colors flex items-center gap-1 cursor-pointer shrink-0"
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                    <span>পাঠান</span>
-                  </button>
-                </div>
-              </div>
-            ))}
+      {/* Banner directing user to Dashboard for conversation history */}
+      {currentUser && (
+        <div className="bg-[#FFF7E6] border border-[#C29B47]/30 rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-[#C29B47] text-white rounded-xl shrink-0">
+              <MessageSquare className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="font-serif-bn font-bold text-base text-[#1D1E20]">পূর্বে পাঠানো বার্তার তালিকা ও উত্তর</h4>
+              <p className="text-xs text-[#5C584E]">আপনার সকল অতীত বার্তা এবং লেখকের সরাসরি জবাব দেখতে ইউজার ড্যাশবোর্ডের ইনবক্স ভিজিট করুন।</p>
+            </div>
           </div>
+          {setCurrentView && (
+            <button
+              type="button"
+              onClick={() => {
+                setCurrentView('dashboard');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="px-5 py-2.5 bg-[#1D1E20] hover:bg-[#C29B47] text-white text-xs font-bold rounded-xl transition-colors shrink-0 cursor-pointer"
+            >
+              ড্যাশবোর্ডে মেসেজেস দেখুন
+            </button>
+          )}
         </div>
       )}
 

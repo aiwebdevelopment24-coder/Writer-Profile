@@ -764,6 +764,10 @@ export default function App() {
             onTriggerAuthRequired={triggerAuthRequired}
             userInquiries={inquiries}
             onReplyInquiry={handleReplyInquiry}
+            setCurrentView={(v) => {
+              setCurrentView(v);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
           />
         )}
 

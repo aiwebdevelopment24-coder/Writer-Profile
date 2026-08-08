@@ -537,9 +537,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
                   {/* Messenger Chat Container */}
                   <div className="bg-[#F9F8F5] p-4 rounded-2xl border border-[#E6E2D8] space-y-3 max-h-[450px] overflow-y-auto">
-                    {/* Primary Message (Sent by User -> Right Aligned) */}
-                    <div className="flex flex-col items-end gap-1 max-w-[85%] ml-auto group">
+                    {/* Primary Message (Sent by User -> Dark Bubble) */}
+                    <div className="flex flex-col items-start gap-1 max-w-[85%] mr-auto group">
                       <div className="flex items-center gap-1.5 text-[10px] text-[#8C887B] font-bold px-1">
+                        {inquiry.avatarUrl || currentUser.avatarUrl ? (
+                          <img 
+                            src={inquiry.avatarUrl || currentUser.avatarUrl} 
+                            alt={currentUser.name} 
+                            className="w-4 h-4 rounded-full object-cover border border-[#C29B47]" 
+                          />
+                        ) : (
+                          <span className="w-4 h-4 rounded-full bg-[#C29B47] text-white flex items-center justify-center text-[8px] font-bold">
+                            {(currentUser.name || 'U').charAt(0)}
+                          </span>
+                        )}
+                        <span>{inquiry.senderName || currentUser.name}</span>
+                        <span>•</span>
+                        <span>{inquiry.date}</span>
                         {onEditInquiryMessage && (
                           <button
                             type="button"
@@ -563,23 +577,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         )}
-                        <span>{inquiry.date}</span>
-                        <span>•</span>
-                        <span>{inquiry.senderName || currentUser.name}</span>
-                        {inquiry.avatarUrl || currentUser.avatarUrl ? (
-                          <img 
-                            src={inquiry.avatarUrl || currentUser.avatarUrl} 
-                            alt={currentUser.name} 
-                            className="w-4 h-4 rounded-full object-cover border border-[#C29B47]" 
-                          />
-                        ) : (
-                          <span className="w-4 h-4 rounded-full bg-[#C29B47] text-white flex items-center justify-center text-[8px] font-bold">
-                            {(currentUser.name || 'U').charAt(0)}
-                          </span>
-                        )}
                       </div>
 
-                      <div className="bg-[#1D1E20] text-white p-3.5 rounded-2xl rounded-tr-sm text-xs leading-relaxed space-y-2 shadow-xs w-full">
+                      <div className="bg-[#EAE7DC] border border-[#D9D3C7] text-[#1D1E20] p-3.5 rounded-2xl rounded-tl-sm text-xs leading-relaxed space-y-2 shadow-xs w-full">
                         {editingMsgKey === `main-${inquiry.id}` ? (
                           <div className="space-y-2">
                             <textarea
@@ -592,7 +592,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                               <button
                                 type="button"
                                 onClick={() => setEditingMsgKey(null)}
-                                className="px-2.5 py-1 text-[11px] font-bold text-gray-300 hover:text-white rounded-lg"
+                                className="px-2.5 py-1 text-[11px] font-bold text-[#8C887B] hover:text-[#1D1E20] rounded-lg"
                               >
                                 বাতিল
                               </button>
@@ -614,7 +614,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           <>
                             <p className="whitespace-pre-line font-medium">{inquiry.message}</p>
                             {inquiry.editedAt && (
-                              <span className="text-[9px] text-gray-400 italic block">(সম্পাদিত)</span>
+                              <span className="text-[9px] text-[#8C887B] italic block">(সম্পাদিত)</span>
                             )}
                           </>
                         )}
@@ -648,9 +648,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       return (
                         <div 
                           key={reply.id} 
-                          className={`flex flex-col gap-1 max-w-[85%] group ${isMe ? 'ml-auto items-end' : 'mr-auto items-start'}`}
+                          className="flex flex-col gap-1 max-w-[85%] mr-auto items-start group"
                         >
                           <div className={`flex items-center gap-1.5 text-[10px] font-bold px-1 ${isMe ? 'text-[#8C887B]' : 'text-[#C29B47]'}`}>
+                            {isMe ? (
+                              reply.avatarUrl || currentUser.avatarUrl ? (
+                                <img src={reply.avatarUrl || currentUser.avatarUrl} alt={currentUser.name} className="w-3.5 h-3.5 rounded-full object-cover" />
+                              ) : (
+                                <span className="w-3.5 h-3.5 rounded-full bg-[#C29B47] text-white flex items-center justify-center text-[7px] font-bold">
+                                  {(currentUser.name || 'U').charAt(0)}
+                                </span>
+                              )
+                            ) : null}
+                            <span>{reply.senderName || (isMe ? currentUser.name : 'এডমিন')}</span>
+                            <span>•</span>
+                            <span className="font-normal">{reply.date}</span>
                             {isMe && onEditInquiryReply && (
                               <button
                                 type="button"
@@ -674,24 +686,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             )}
-                            <span>{reply.senderName || (isMe ? currentUser.name : 'এডমিন')}</span>
-                            <span>•</span>
-                            <span className="font-normal">{reply.date}</span>
-                            {isMe && (
-                              reply.avatarUrl || currentUser.avatarUrl ? (
-                                <img src={reply.avatarUrl || currentUser.avatarUrl} alt={currentUser.name} className="w-3.5 h-3.5 rounded-full object-cover" />
-                              ) : (
-                                <span className="w-3.5 h-3.5 rounded-full bg-[#C29B47] text-white flex items-center justify-center text-[7px] font-bold">
-                                  {(currentUser.name || 'U').charAt(0)}
-                                </span>
-                              )
-                            )}
                           </div>
 
                           <div 
                             className={`p-3.5 rounded-2xl text-xs leading-relaxed space-y-2 shadow-xs w-full ${
                               isMe 
-                                ? 'bg-[#1D1E20] text-white rounded-tr-sm' 
+                                ? 'bg-[#EAE7DC] border border-[#D9D3C7] text-[#1D1E20] rounded-tl-sm' 
                                 : 'bg-[#FFF7E6] border border-[#C29B47]/30 text-[#1D1E20] rounded-tl-sm'
                             }`}
                           >
@@ -707,7 +707,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                                   <button
                                     type="button"
                                     onClick={() => setEditingMsgKey(null)}
-                                    className="px-2.5 py-1 text-[11px] font-bold text-gray-300 hover:text-white rounded-lg"
+                                    className="px-2.5 py-1 text-[11px] font-bold text-[#8C887B] hover:text-[#1D1E20] rounded-lg"
                                   >
                                     বাতিল
                                   </button>
