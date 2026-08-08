@@ -157,36 +157,41 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       className="group-hover:scale-105 transition-transform duration-300"
                       showSpine={false}
                     />
-                    {book.isNewRelease && (
-                      <span className="absolute top-2 left-2 bg-[#C29B47] text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow z-10">
-                        নতুন
-                      </span>
-                    )}
-                    {onToggleWishlist && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onToggleWishlist(book.id);
-                        }}
-                        className="absolute top-2 right-2 p-1.5 bg-white/90 backdrop-blur-sm rounded-full shadow hover:scale-110 transition-transform z-10 cursor-pointer"
-                        title="উইশলিস্টে রাখুন"
-                      >
-                        <Heart className={`w-3.5 h-3.5 ${isWishlisted ? 'fill-rose-500 text-rose-500' : 'text-[#8C887B]'}`} />
-                      </button>
-                    )}
                   </div>
 
                   <div className="flex-1 min-w-0 flex flex-col justify-between py-1">
                     <div className="space-y-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-[10px] font-bold uppercase text-[#C29B47] block truncate">
-                          {book.category}
-                        </span>
-                        {book.originalPrice && book.originalPrice > book.price && (
-                          <span className="bg-rose-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-xs shrink-0">
-                            {Math.round(((book.originalPrice - book.price) / book.originalPrice) * 100)}% ছাড়
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          {book.isNewRelease && (
+                            <span className="bg-[#C29B47] text-white text-[9px] font-bold px-2 py-0.5 rounded shadow-xs shrink-0">
+                              নতুন
+                            </span>
+                          )}
+                          <span className="text-[10px] font-bold uppercase text-[#C29B47] block truncate">
+                            {book.category}
                           </span>
-                        )}
+                        </div>
+
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {book.originalPrice && book.originalPrice > book.price && (
+                            <span className="bg-rose-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-xs shrink-0">
+                              {Math.round(((book.originalPrice - book.price) / book.originalPrice) * 100)}% ছাড়
+                            </span>
+                          )}
+                          {onToggleWishlist && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleWishlist(book.id);
+                              }}
+                              className="p-1.5 bg-[#F9F8F5] hover:bg-rose-50 border border-[#E2DDD3] rounded-full shadow-xs transition-colors cursor-pointer"
+                              title="উইশলিস্টে রাখুন"
+                            >
+                              <Heart className={`w-3.5 h-3.5 ${isWishlisted ? 'fill-rose-500 text-rose-500' : 'text-[#8C887B]'}`} />
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <h4 
                         onClick={() => onSelectBook(book)}
