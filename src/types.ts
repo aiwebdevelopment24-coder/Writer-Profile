@@ -33,6 +33,7 @@ export interface SiteConfig {
   footerSubtext?: string;
   contactEmail: string;
   contactPhone?: string;
+  bookCategories?: string[];
   dhakaCityDeliveryFee?: number;
   dhakaSuburbanDeliveryFee?: number;
   outsideDhakaDeliveryFee?: number;

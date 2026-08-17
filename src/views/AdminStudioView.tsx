@@ -5,7 +5,8 @@ import {
   BookOpen, Eye, Mail, TrendingUp, Plus, Edit, Edit3, Trash2, 
   Search, CheckCircle, Clock, FileText, ArrowUpRight, 
   X, Filter, Settings, User, ShoppingBag, Check, ShieldAlert,
-  Globe, LayoutDashboard, Bold, Type, Link, Sparkles, Upload, Star, Send
+  Globe, LayoutDashboard, Bold, Type, Link, Sparkles, Upload, Star, Send,
+  Tag, FolderPlus, Layers
 } from 'lucide-react';
 
 interface AdminStudioViewProps {
@@ -72,6 +73,83 @@ export const AdminStudioView: React.FC<AdminStudioViewProps> = ({
 
   // Site Config Form Local State
   const [configForm, setConfigForm] = useState<SiteConfig>({ ...siteConfig });
+
+  // Category Management States
+  const [newCategoryInput, setNewCategoryInput] = useState('');
+  const [editingCategoryOldName, setEditingCategoryOldName] = useState<string | null>(null);
+  const [editingCategoryNewName, setEditingCategoryNewName] = useState('');
+
+  // Active Book Categories list derived from config + books
+  const allConfiguredCategories = Array.from(
+    new Set([
+      ...(configForm.bookCategories || siteConfig.bookCategories || [
+        'উপন্যাস', 'গল্প', 'কবিতা', 'ইসলামি সাহিত্য', 'ভাবনা ও জীবন', 
+        'সংকলন', 'ইসলামি ইতিহাস', 'প্রবন্ধ', 'আত্মউন্নয়ন', 'থ্রিলার', 'শিশু-কিশোর'
+      ]),
+      ...books.map(b => b.category).filter(Boolean)
+    ])
+  );
+
+  const handleAddCategory = (catName: string) => {
+    const trimmed = catName.trim();
+    if (!trimmed) return;
+    const currentCats = configForm.bookCategories || siteConfig.bookCategories || [];
+    if (currentCats.includes(trimmed)) {
+      triggerSaveToast(`"${trimmed}" ক্যাটাগরিটি ইতিমধ্যে তালিকায় আছে।`);
+      return;
+    }
+    const updatedCats = [...currentCats, trimmed];
+    const updatedConfig = { ...configForm, bookCategories: updatedCats };
+    setConfigForm(updatedConfig);
+    onUpdateSiteConfig(updatedConfig);
+    setNewCategoryInput('');
+    triggerSaveToast(`"${trimmed}" ক্যাটাগরিটি সফলভাবে যুক্ত করা হয়েছে!`);
+  };
+
+  const handleDeleteCategory = (catName: string) => {
+    const bookCount = books.filter(b => b.category === catName).length;
+    if (bookCount > 0) {
+      if (!window.confirm(`"${catName}" ক্যাটাগরির অধীনে ${bookCount}টি বই রয়েছে। আপনি কি নিশ্চিত যে ক্যাটাগরিটি মুছে ফেলতে চান?`)) {
+        return;
+      }
+    }
+    const currentCats = configForm.bookCategories || siteConfig.bookCategories || [];
+    const updatedCats = currentCats.filter(c => c !== catName);
+    const updatedConfig = { ...configForm, bookCategories: updatedCats };
+    setConfigForm(updatedConfig);
+    onUpdateSiteConfig(updatedConfig);
+    triggerSaveToast(`"${catName}" ক্যাটাগরিটি মুছে ফেলা হয়েছে!`);
+  };
+
+  const handleRenameCategory = (oldName: string, newName: string) => {
+    const trimmedNew = newName.trim();
+    if (!trimmedNew || trimmedNew === oldName) {
+      setEditingCategoryOldName(null);
+      return;
+    }
+    const currentCats = configForm.bookCategories || siteConfig.bookCategories || [];
+    const updatedCats = currentCats.map(c => c === oldName ? trimmedNew : c);
+    if (!updatedCats.includes(trimmedNew)) {
+      updatedCats.push(trimmedNew);
+    }
+    const updatedConfig = { ...configForm, bookCategories: updatedCats };
+    setConfigForm(updatedConfig);
+    onUpdateSiteConfig(updatedConfig);
+
+    // Update all books having this category
+    books.forEach(b => {
+      if (b.category === oldName) {
+        onUpdateBook({
+          ...b,
+          category: trimmedNew,
+          genreTag: b.genreTag ? b.genreTag.replace(oldName, trimmedNew) : `${trimmedNew} • ${b.year || '২০২৪'}`
+        });
+      }
+    });
+
+    setEditingCategoryOldName(null);
+    triggerSaveToast(`ক্যাটাগরি "${oldName}" পরিবর্তন করে "${trimmedNew}" করা হয়েছে!`);
+  };
 
   // Book Modal States
   const [bookModalOpen, setBookModalOpen] = useState(false);
@@ -156,10 +234,20 @@ export const AdminStudioView: React.FC<AdminStudioViewProps> = ({
     e.preventDefault();
     if (!bookForm.title) return;
 
+    const chosenCategory = (bookForm.category || 'উপন্যাস').trim();
+    if (chosenCategory) {
+      const currentCats = configForm.bookCategories || siteConfig.bookCategories || [];
+      if (!currentCats.includes(chosenCategory)) {
+        const updatedCats = [...currentCats, chosenCategory];
+        const updatedConfig = { ...configForm, bookCategories: updatedCats };
+        setConfigForm(updatedConfig);
+        onUpdateSiteConfig(updatedConfig);
+      }
+    }
+
     if (editingBookId) {
       onUpdateBook({
-        category: 'উপন্যাস',
-        genreTag: 'উপন্যাস • ২০২৪',
+        genreTag: `${chosenCategory || 'উপন্যাস'} • ${bookForm.year || '২০২৪'}`,
         year: '২০২৪',
         coverImage: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=800&q=80',
         shortSynopsis: '',
@@ -173,14 +261,15 @@ export const AdminStudioView: React.FC<AdminStudioViewProps> = ({
         status: 'published',
         author: bookForm.author !== undefined ? bookForm.author : (siteConfig.authorName || ''),
         ...(bookForm as Book),
+        category: chosenCategory || 'উপন্যাস',
         id: editingBookId,
       });
       triggerSaveToast('বইয়ের তথ্য আপডেট করা হয়েছে!');
     } else {
       const newBook: Book = {
         title: bookForm.title || 'শিরোনামহীন বই',
-        category: bookForm.category || 'উপন্যাস',
-        genreTag: bookForm.genreTag || `${bookForm.category || 'উপন্যাস'} • ২০২৪`,
+        category: chosenCategory || 'উপন্যাস',
+        genreTag: bookForm.genreTag || `${chosenCategory || 'উপন্যাস'} • ${bookForm.year || '২০২৪'}`,
         year: bookForm.year || '২০২৪',
         coverImage: bookForm.coverImage || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=800&q=80',
         shortSynopsis: bookForm.shortSynopsis || '',
@@ -840,63 +929,233 @@ export const AdminStudioView: React.FC<AdminStudioViewProps> = ({
 
       {/* TAB 3: BOOKS MANAGEMENT ('books') */}
       {activeTab === 'books' && (
-        <div className="bg-white p-6 sm:p-8 border border-[#E6E2D8] rounded-3xl shadow-sm space-y-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-[#E6E2D8] pb-4">
-            <div>
-              <h2 className="font-serif-bn font-bold text-2xl text-[#1D1E20]">বই ক্যাটালগ ম্যানেজমেন্ট</h2>
-              <p className="text-xs text-[#8C887B]">নতুন বই যুক্ত করুন, তথ্য ও প্রচ্ছদ এডিট করুন বা বই মুছে ফেলুন।</p>
+        <div className="space-y-6">
+          {/* CATEGORY MANAGEMENT CARD */}
+          <div className="bg-white p-6 sm:p-8 border border-[#E6E2D8] rounded-3xl shadow-sm space-y-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-[#E6E2D8] pb-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Tag className="w-5 h-5 text-[#C29B47]" />
+                  <h2 className="font-serif-bn font-bold text-2xl text-[#1D1E20]">বইয়ের ক্যাটাগরি ও জনরা ম্যানেজমেন্ট</h2>
+                  <span className="bg-[#EFECE6] text-[#1D1E20] text-xs font-bold px-2.5 py-0.5 rounded-full">
+                    {allConfiguredCategories.length}টি ক্যাটাগরি
+                  </span>
+                </div>
+                <p className="text-xs text-[#8C887B]">
+                  যেকোনো নতুন ক্যাটাগরি তৈরি করুন, এডিট বা ডিলিট করুন। এই ক্যাটাগরিগুলো দিয়ে পাঠকরা বই ফিল্টার করতে পারবেন।
+                </p>
+              </div>
             </div>
 
-            <button
-              onClick={() => handleOpenBookModal()}
-              className="px-5 py-2.5 bg-[#C29B47] text-white text-xs font-bold rounded-xl hover:bg-[#a88338] shadow flex items-center gap-1.5"
-            >
-              <Plus className="w-4 h-4" />
-              <span>নতুন বই যোগ করুন</span>
-            </button>
-          </div>
+            {/* Add New Category Input Form */}
+            <div className="bg-[#F9F8F5] border border-[#E6E2D8] rounded-2xl p-4 sm:p-5 space-y-4">
+              <label className="block text-xs font-bold text-[#1D1E20]">নতুন ক্যাটাগরি যোগ করুন (Add Any Category)</label>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <input
+                  type="text"
+                  placeholder="যেমন: উপন্যাস, গল্প, কবিতা, প্রবন্ধ, ইসলামিক, আত্মউন্নয়ন..."
+                  value={newCategoryInput}
+                  onChange={(e) => setNewCategoryInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddCategory(newCategoryInput);
+                    }
+                  }}
+                  className="flex-1 px-4 py-2.5 bg-white border border-[#D9D3C7] rounded-xl text-xs sm:text-sm font-semibold focus:outline-none focus:border-[#C29B47]"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleAddCategory(newCategoryInput)}
+                  className="px-6 py-2.5 bg-[#1D1E20] hover:bg-[#C29B47] text-white text-xs font-bold rounded-xl transition-colors shadow flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>ক্যাটাগরি যুক্ত করুন</span>
+                </button>
+              </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {books.map((b) => (
-              <div key={b.id} className="bg-[#F9F8F5] border border-[#E6E2D8] rounded-2xl p-5 shadow-sm space-y-4 flex flex-col justify-between group hover:border-[#C29B47] transition-all">
-                <div className="space-y-3">
-                  <div className="w-full h-48 bg-white rounded-xl overflow-hidden flex items-center justify-center relative shadow-inner">
-                    <img src={b.coverImage} alt={b.title} className="h-40 object-cover shadow-md rounded" />
-                    {b.isNewRelease && (
-                      <span className="absolute top-2 left-2 bg-[#C29B47] text-white text-[9px] font-bold px-2 py-0.5 rounded shadow">
-                        নতুন
-                      </span>
-                    )}
-                  </div>
-
-                  <div>
-                    <span className="text-[10px] font-bold uppercase text-[#C29B47]">{b.category} • ৳{b.price}</span>
-                    <h3 className="font-serif-bn font-bold text-lg text-[#1D1E20] line-clamp-1">{b.title}</h3>
-                    <p className="text-xs text-[#8C887B] line-clamp-2 mt-1">{b.shortSynopsis}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 pt-3 border-t border-[#E6E2D8]">
-                  <button
-                    onClick={() => handleOpenBookModal(b)}
-                    className="flex-1 py-2 bg-white border border-[#D9D3C7] text-xs font-bold text-[#1D1E20] rounded-xl hover:bg-[#EFECE6] flex items-center justify-center gap-1"
-                  >
-                    <Edit className="w-3.5 h-3.5" />
-                    <span>এডিট</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      onDeleteBook(b.id);
-                      triggerSaveToast(`"${b.title}" বইটি মুছে ফেলা হয়েছে!`);
-                    }}
-                    className="p-2 border border-rose-200 text-rose-600 rounded-xl hover:bg-rose-50 hover:border-rose-300 transition-colors"
-                    title="বইটি মুছে ফেলুন"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+              {/* Quick Presets */}
+              <div className="space-y-1.5 pt-2 border-t border-[#E6E2D8]">
+                <span className="text-[11px] font-bold text-[#8C887B]">দ্রুত যোগ করার জন্য ক্লিক করুন (Quick Suggestions):</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    'উপন্যাস', 'গল্প', 'কবিতা', 'ইসলামি সাহিত্য', 'ভাবনা ও জীবন', 
+                    'সংকলন', 'ইসলামি ইতিহাস', 'প্রবন্ধ', 'আত্মউন্নয়ন', 'থ্রিলার', 
+                    'শিশু-কিশোর', 'ভ্রমণকাহিনী', 'জীবনী', 'বিজ্ঞান কল্পকাহিনী', 'রম্যরচনা'
+                  ].map((preset) => {
+                    const isAlreadyAdded = allConfiguredCategories.includes(preset);
+                    return (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => handleAddCategory(preset)}
+                        disabled={isAlreadyAdded}
+                        className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all ${
+                          isAlreadyAdded
+                            ? 'bg-[#EAE6DD] text-[#8C887B] cursor-default opacity-60'
+                            : 'bg-white border border-[#D9D3C7] hover:border-[#C29B47] hover:text-[#C29B47] text-[#5C584E] cursor-pointer shadow-2xs'
+                        }`}
+                      >
+                        <span>{preset}</span>
+                        {!isAlreadyAdded && <Plus className="w-3 h-3 text-[#C29B47]" />}
+                        {isAlreadyAdded && <Check className="w-3 h-3 text-emerald-600" />}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
-            ))}
+            </div>
+
+            {/* List of Active Categories */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold text-[#1D1E20] uppercase tracking-wider flex items-center gap-1.5">
+                <Layers className="w-3.5 h-3.5 text-[#C29B47]" />
+                <span>বর্তমান সক্রিয় ক্যাটাগরি তালিকা ({allConfiguredCategories.length}):</span>
+              </h4>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {allConfiguredCategories.map((catName) => {
+                  const bookCount = books.filter(b => b.category.trim() === catName.trim()).length;
+                  const isEditingThis = editingCategoryOldName === catName;
+
+                  return (
+                    <div
+                      key={catName}
+                      className="p-3 bg-[#F9F8F5] border border-[#E6E2D8] rounded-xl flex items-center justify-between gap-2 group hover:border-[#C29B47] transition-all"
+                    >
+                      {isEditingThis ? (
+                        <div className="flex items-center gap-1.5 w-full">
+                          <input
+                            type="text"
+                            autoFocus
+                            value={editingCategoryNewName}
+                            onChange={(e) => setEditingCategoryNewName(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                handleRenameCategory(catName, editingCategoryNewName);
+                              } else if (e.key === 'Escape') {
+                                setEditingCategoryOldName(null);
+                              }
+                            }}
+                            className="flex-1 px-2.5 py-1 text-xs bg-white border border-[#C29B47] rounded-lg font-bold outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleRenameCategory(catName, editingCategoryNewName)}
+                            className="p-1 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+                            title="সংরক্ষণ করুন"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingCategoryOldName(null)}
+                            className="p-1 bg-[#D9D3C7] text-[#1D1E20] rounded-lg hover:bg-rose-100 hover:text-rose-600"
+                            title="বাতিল করুন"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="font-serif-bn font-bold text-sm text-[#1D1E20] truncate">
+                              {catName}
+                            </span>
+                            <span className="text-[10px] bg-white border border-[#D9D3C7] text-[#8C887B] font-bold px-2 py-0.5 rounded-full shrink-0">
+                              {bookCount}টি বই
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingCategoryOldName(catName);
+                                setEditingCategoryNewName(catName);
+                              }}
+                              className="p-1.5 text-[#8C887B] hover:text-[#1D1E20] hover:bg-white rounded-lg transition-colors"
+                              title="ক্যাটাগরি নাম পরিবর্তন করুন"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteCategory(catName)}
+                              className="p-1.5 text-[#8C887B] hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                              title="ক্যাটাগরিটি মুছে ফেলুন"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* BOOK CATALOG MANAGEMENT */}
+          <div className="bg-white p-6 sm:p-8 border border-[#E6E2D8] rounded-3xl shadow-sm space-y-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-[#E6E2D8] pb-4">
+              <div>
+                <h2 className="font-serif-bn font-bold text-2xl text-[#1D1E20]">বই ক্যাটালগ ম্যানেজমেন্ট</h2>
+                <p className="text-xs text-[#8C887B]">নতুন বই যুক্ত করুন, তথ্য ও প্রচ্ছদ এডিট করুন বা বই মুছে ফেলুন।</p>
+              </div>
+
+              <button
+                onClick={() => handleOpenBookModal()}
+                className="px-5 py-2.5 bg-[#C29B47] text-white text-xs font-bold rounded-xl hover:bg-[#a88338] shadow flex items-center gap-1.5 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>নতুন বই যোগ করুন</span>
+              </button>
+            </div>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {books.map((b) => (
+                <div key={b.id} className="bg-[#F9F8F5] border border-[#E6E2D8] rounded-2xl p-5 shadow-sm space-y-4 flex flex-col justify-between group hover:border-[#C29B47] transition-all">
+                  <div className="space-y-3">
+                    <div className="w-full h-48 bg-white rounded-xl overflow-hidden flex items-center justify-center relative shadow-inner">
+                      <img src={b.coverImage} alt={b.title} className="h-40 object-cover shadow-md rounded" />
+                      {b.isNewRelease && (
+                        <span className="absolute top-2 left-2 bg-[#C29B47] text-white text-[9px] font-bold px-2 py-0.5 rounded shadow">
+                          নতুন
+                        </span>
+                      )}
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] font-bold uppercase text-[#C29B47]">{b.category} • ৳{b.price}</span>
+                      <h3 className="font-serif-bn font-bold text-lg text-[#1D1E20] line-clamp-1">{b.title}</h3>
+                      <p className="text-xs text-[#8C887B] line-clamp-2 mt-1">{b.shortSynopsis}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-3 border-t border-[#E6E2D8]">
+                    <button
+                      onClick={() => handleOpenBookModal(b)}
+                      className="flex-1 py-2 bg-white border border-[#D9D3C7] text-xs font-bold text-[#1D1E20] rounded-xl hover:bg-[#EFECE6] flex items-center justify-center gap-1"
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                      <span>এডিট</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        onDeleteBook(b.id);
+                        triggerSaveToast(`"${b.title}" বইটি মুছে ফেলা হয়েছে!`);
+                      }}
+                      className="p-2 border border-rose-200 text-rose-600 rounded-xl hover:bg-rose-50 hover:border-rose-300 transition-colors"
+                      title="বইটি মুছে ফেলুন"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -1518,16 +1777,57 @@ export const AdminStudioView: React.FC<AdminStudioViewProps> = ({
                     />
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="block text-xs font-bold text-[#3A3834]">ক্যাটাগরি *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="উপন্যাস / কবিতা / প্রবন্ধ ইত্যাদি"
-                      value={bookForm.category || ''}
-                      onChange={(e) => setBookForm({ ...bookForm, category: e.target.value })}
-                      className="w-full px-3 py-2.5 bg-[#F9F8F5] border border-[#D9D3C7] rounded-xl text-xs focus:outline-none focus:border-[#C29B47]"
-                    />
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-bold text-[#3A3834]">বইয়ের ক্যাটাগরি (Genre / Category) *</label>
+                      <span className="text-[10px] text-[#8C887B]">নিচ থেকে বেছে নিন বা নতুন নাম লিখুন</span>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        required
+                        placeholder="যেমন: উপন্যাস, গল্প, কবিতা, ইসলামিক ইত্যাদি"
+                        value={bookForm.category || ''}
+                        onChange={(e) => setBookForm({ ...bookForm, category: e.target.value })}
+                        className="flex-1 px-3 py-2 bg-[#F9F8F5] border border-[#D9D3C7] rounded-xl text-xs font-bold focus:outline-none focus:border-[#C29B47]"
+                      />
+                      <select
+                        value={allConfiguredCategories.includes(bookForm.category || '') ? bookForm.category : ''}
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            setBookForm({ ...bookForm, category: e.target.value });
+                          }
+                        }}
+                        className="px-3 py-2 bg-[#EFECE6] border border-[#D9D3C7] rounded-xl text-xs font-semibold focus:outline-none focus:border-[#C29B47] text-[#1D1E20]"
+                      >
+                        <option value="">তালিকাবদ্ধ ক্যাটাগরি...</option>
+                        {allConfiguredCategories.map(cat => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Quick Pill selector */}
+                    <div className="flex flex-wrap gap-1 pt-1 max-h-24 overflow-y-auto">
+                      {allConfiguredCategories.map(cat => {
+                        const isSelected = bookForm.category === cat;
+                        return (
+                          <button
+                            key={cat}
+                            type="button"
+                            onClick={() => setBookForm({ ...bookForm, category: cat })}
+                            className={`px-2.5 py-0.5 rounded-md text-[11px] font-semibold transition-colors cursor-pointer ${
+                              isSelected
+                                ? 'bg-[#1D1E20] text-white shadow-xs'
+                                : 'bg-[#F0EDE6] text-[#5C584E] hover:bg-[#E2DDD3] hover:text-[#1D1E20]'
+                            }`}
+                          >
+                            {cat}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   <div className="space-y-1">

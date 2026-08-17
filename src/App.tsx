@@ -686,6 +686,7 @@ export default function App() {
         {currentView === 'books' && (
           <BooksView
             books={books}
+            siteConfig={siteConfig}
             setCurrentView={(v) => {
               setCurrentView(v);
               window.scrollTo({ top: 0, behavior: 'smooth' });
